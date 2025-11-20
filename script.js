@@ -1,14 +1,14 @@
 // ================= CONFIG =================
-const API_KEY = "AIzaSyC6Bqdd4k4h_8yTmdGO9S9qWp_rz8DDPv8"; // 請在此填入您的 API Key
+const API_KEY = "AIzaSyC6Bqdd4k4h_8yTmdGO9S9qWp_rz8DDPv8"; // ★請在此填入您的 Google Gemini API Key★
 
 // ================= STATE =================
 const state = {
-    productImage: null, // Base64
-    refImage: null,     // Base64
+    productImage: null,
+    refImage: null,
     productName: "",
-    bgSourceMode: 'upload', // 'upload' | 'preset'
-    uploadSubMode: 'composite', // 'composite' | 'composition'
-    selectedPreset: 0, // Index
+    bgSourceMode: 'upload',
+    uploadSubMode: 'composite',
+    selectedPreset: 0,
     customPrompt: "",
     isLoading: false,
     isAnalyzing: false,
@@ -17,12 +17,12 @@ const state = {
 };
 
 const SCENE_PRESETS = [
-    { name: '極簡攝影棚', desc: '純淨光影，專業打光', icon: 'camera', prompt: "Clean, minimal white or light grey background, soft diffused lighting from above, subtle shadows, high resolution." },
-    { name: '溫暖木質', desc: '居家氛圍，自然窗光', icon: 'box', prompt: "Beautiful light oak wooden surface. Warm natural sunlight, shallow depth of field, blurred cozy home background." },
-    { name: '奢華大理石', desc: '高級冷調，表面反光', icon: 'layout', prompt: "Luxurious white marble countertop. Elegant setting, bright soft lighting, slight reflections, premium lifestyle vibe." },
-    { name: '現代咖啡廳', desc: '時尚散景，悠閒感', icon: 'coffee', prompt: "Stylish wooden table in a modern cafe. Blurred bokeh lights in background, warm inviting atmosphere." },
-    { name: '鄉村廚房', desc: '手作感，亞麻與香草', icon: 'utensils', prompt: "Rustic wooden cutting board in a cozy farmhouse kitchen. Soft natural light, linen and herbs props." },
-    { name: '戶外花園', desc: '清新自然，明亮陽光', icon: 'leaf', prompt: "Picnic blanket in a sunny garden. Blurred greenery, bright natural light, fresh atmosphere." }
+    { name: '極簡攝影棚', desc: '純淨光影，專業打光', icon: 'camera', prompt: "Professional studio photography. Clean, minimal white or light grey background. Soft diffused lighting from above. Sharp focus, 8k resolution, highly detailed texture." },
+    { name: '溫暖木質', desc: '居家氛圍，自然窗光', icon: 'box', prompt: "Beautiful light oak wooden surface. Warm natural sunlight streaming from a window. Sharp product focus with creamy bokeh background. Cozy home atmosphere." },
+    { name: '奢華大理石', desc: '高級冷調，表面反光', icon: 'layout', prompt: "Luxurious white marble countertop. Elegant setting. Bright, crisp soft lighting. Realistic reflections on the surface. Premium lifestyle vibe." },
+    { name: '現代咖啡廳', desc: '時尚散景，悠閒感', icon: 'coffee', prompt: "Stylish wooden table in a modern cafe. Blurred bokeh lights in background. Warm inviting atmosphere. Photorealistic food photography style." },
+    { name: '鄉村廚房', desc: '手作感，亞麻與香草', icon: 'utensils', prompt: "Rustic wooden cutting board in a cozy farmhouse kitchen. Soft natural window light. Linen and herbs props. High texture detail." },
+    { name: '戶外花園', desc: '清新自然，明亮陽光', icon: 'leaf', prompt: "Picnic blanket in a sunny garden. Blurred greenery background. Bright natural sunlight. Fresh atmosphere. Sharp details." }
 ];
 
 const VARIATION_ANGLES = [
@@ -86,32 +86,33 @@ function init() {
 
 // ================= EVENT LISTENERS =================
 
-// Product Upload
+// 1. 商品上傳
 els.productUploadArea.addEventListener('click', () => els.productInput.click());
 els.productInput.addEventListener('change', handleProductFile);
 els.clearProductBtn.addEventListener('click', clearProduct);
 els.productName.addEventListener('input', (e) => { state.productName = e.target.value; });
 
-// Mode Switching
+// 2. 模式切換
 els.modeUploadBtn.addEventListener('click', () => { state.bgSourceMode = 'upload'; updateUI(); });
 els.modePresetBtn.addEventListener('click', () => { state.bgSourceMode = 'preset'; updateUI(); });
 
-// Ref Upload
+// 3. 參考圖上傳 (已修復點擊監聽)
+els.refUploadArea.addEventListener('click', () => els.refInput.click());
 els.refInput.addEventListener('change', handleRefFile);
 els.clearRefBtn.addEventListener('click', (e) => { e.stopPropagation(); clearRef(); });
 
-// Submode Switching
+// 4. 子模式切換
 els.submodeCompositeBtn.addEventListener('click', () => { state.uploadSubMode = 'composite'; updateUI(); });
 els.submodeCompositionBtn.addEventListener('click', () => { state.uploadSubMode = 'composition'; updateUI(); });
 
-// Generate
+// 5. 生成與提示詞
 els.generateBtn.addEventListener('click', generateAll);
 els.customPrompt.addEventListener('input', (e) => { state.customPrompt = e.target.value; });
 
 // ================= LOGIC =================
 
 function updateUI() {
-    // Toggle Modes
+    // 模式切換顯示
     if (state.bgSourceMode === 'upload') {
         els.modeUploadBtn.className = "flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-medium transition-all bg-white text-zinc-900 shadow-sm";
         els.modePresetBtn.className = "flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-medium transition-all text-zinc-500 hover:text-zinc-700";
@@ -126,10 +127,10 @@ function updateUI() {
         els.customPrompt.placeholder = "或輸入自定義場景描述...";
     }
 
-    // Ref Image Logic
+    // 參考圖顯示邏輯
     if (state.refImage) {
-        els.refPlaceholder.parentElement.classList.add('hidden'); // Hide upload box
-        els.refPreviewContainer.classList.remove('hidden'); // Show preview
+        els.refPlaceholder.parentElement.classList.add('hidden');
+        els.refPreviewContainer.classList.remove('hidden');
         els.uploadSubmodeContainer.classList.remove('hidden');
         els.refImg.src = state.refImage;
     } else {
@@ -138,7 +139,7 @@ function updateUI() {
         els.uploadSubmodeContainer.classList.add('hidden');
     }
 
-    // Submode Styles
+    // 子模式按鈕樣式
     const activeClass = "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md text-[10px] font-medium transition-all border bg-indigo-600 text-white border-indigo-600 shadow-sm";
     const inactiveClass = "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md text-[10px] font-medium transition-all border bg-white text-zinc-500 border-zinc-200 hover:border-indigo-300";
     
@@ -152,9 +153,8 @@ function updateUI() {
         els.submodeDesc.innerText = "• 適合有雜物的照片。AI 會將照片當作「構圖模版」，移除中間物體並填入您的商品。";
     }
 
-    // Generate Button State
+    // 生成按鈕狀態
     const canGenerate = state.productImage && (state.bgSourceMode === 'preset' || (state.bgSourceMode === 'upload' && state.refImage)) && !state.isLoading;
-    
     if (canGenerate) {
         els.generateBtn.disabled = false;
         els.generateBtn.classList.remove('bg-zinc-100', 'text-zinc-400', 'cursor-not-allowed');
@@ -165,7 +165,7 @@ function updateUI() {
         els.generateBtn.classList.remove('bg-zinc-900', 'text-white', 'hover:bg-zinc-800');
     }
 
-    // Text Updates
+    // 按鈕與標題文字更新
     if (state.bgSourceMode === 'upload') {
         els.generateBtnText.innerText = state.uploadSubMode === 'composite' ? "合成至背景 + 4視角" : "替換主體 + 4視角";
         els.previewTitle.innerText = state.uploadSubMode === 'composite' ? "Composite Result" : "Swap Result";
@@ -174,20 +174,20 @@ function updateUI() {
         els.previewTitle.innerText = "AI Generated Result";
     }
     
-    // Product Preview State
+    // 商品圖預覽
     if (state.productImage) {
-            els.productPlaceholder.classList.add('hidden');
-            els.productPreviewContainer.classList.remove('hidden');
-            els.productImg.src = state.productImage;
-            els.clearProductBtn.classList.remove('hidden');
+        els.productPlaceholder.classList.add('hidden');
+        els.productPreviewContainer.classList.remove('hidden');
+        els.productImg.src = state.productImage;
+        els.clearProductBtn.classList.remove('hidden');
     } else {
-            els.productPlaceholder.classList.remove('hidden');
-            els.productPreviewContainer.classList.add('hidden');
-            els.productImg.src = "";
-            els.clearProductBtn.classList.add('hidden');
+        els.productPlaceholder.classList.remove('hidden');
+        els.productPreviewContainer.classList.add('hidden');
+        els.productImg.src = "";
+        els.clearProductBtn.classList.add('hidden');
     }
 
-    // Loading State
+    // Loading 狀態
     if (state.isLoading) {
         els.generateBtnText.innerText = "AI 運算中...";
         els.previewEmpty.classList.add('hidden');
@@ -204,7 +204,7 @@ function updateUI() {
         renderVariations();
     }
 
-    // Analysis Loading
+    // 辨識中狀態
     if (state.isAnalyzing) {
         els.productAnalysisOverlay.classList.remove('hidden');
     } else {
@@ -232,7 +232,7 @@ window.selectPreset = (idx) => {
     updateUI();
 };
 
-// File Handling
+// 檔案處理
 function handleProductFile(e) {
     const file = e.target.files[0];
     if (file) {
@@ -274,7 +274,7 @@ function clearRef() {
     updateUI();
 }
 
-// API Calls
+// API 呼叫
 async function analyzeProductImage(base64) {
     state.isAnalyzing = true;
     updateUI();
@@ -325,7 +325,6 @@ async function generateAll() {
     const subjectLabel = state.productName.trim() ? `the ${state.productName}` : "the product object from Image 1";
     const qualityPrompt = "OUTPUT QUALITY: Photorealistic, 8k resolution, sharp focus, highly detailed texture. NO BLUR. NO ARTIFACTS.";
 
-    // 1. Main Image Prompt Construction
     let mainInstruction = "";
     if (state.bgSourceMode === 'upload' && refBase64) {
         if (state.uploadSubMode === 'composite') {
@@ -339,13 +338,11 @@ async function generateAll() {
     if (state.customPrompt) mainInstruction += `\nADDITIONAL: ${state.customPrompt}`;
 
     try {
-        // Main Image Call
         const mainUrl = await callGemini(mainInstruction, productBase64, refBase64, 0.25);
         state.generatedImage = mainUrl;
         state.isLoading = false;
         updateUI();
 
-        // Variations Calls (Parallel)
         VARIATION_ANGLES.forEach(async (angle) => {
             let varPrompt = "";
             if (state.bgSourceMode === 'upload' && refBase64) {
@@ -393,7 +390,6 @@ async function callGemini(prompt, img1, img2, temp) {
 
 function renderVariations() {
     if (state.variations.length > 0) els.variationsSection.classList.remove('hidden');
-    // Simple sorting to keep order if possible, or just append
     els.variationsGrid.innerHTML = state.variations.map((v, i) => `
         <div class="group relative bg-white border-2 border-zinc-100 hover:border-zinc-300 rounded-xl overflow-hidden cursor-pointer transition-all" onclick="viewVariation('${v.url}')">
             <div class="aspect-[4/3] overflow-hidden bg-zinc-50 flex items-center justify-center relative">
