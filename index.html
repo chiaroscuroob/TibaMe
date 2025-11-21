@@ -4,27 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Product Scene Generator Pro</title>
-    
-    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e4e4e7; border-radius: 20px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #d4d4d8; }
-        .bg-grid-pattern { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .animate-spin-slow { animation: spin 3s linear infinite; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-zinc-50 text-zinc-900 h-screen flex flex-col overflow-hidden selection:bg-zinc-900 selection:text-white">
 
-    <!-- Header -->
     <header class="bg-white border-b border-zinc-200 h-16 flex-none z-30">
         <div class="max-w-[1600px] mx-auto px-6 h-full flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -34,12 +19,11 @@
                 <span class="font-bold text-lg tracking-tight">StudioAI <span class="font-normal text-zinc-400">| Pro</span></span>
             </div>
             <div class="flex items-center gap-4">
-                <span class="text-xs font-medium text-zinc-400 border px-2 py-1 rounded border-zinc-200 bg-zinc-50">v7.5 No-Cache</span>
+                <span class="text-xs font-medium text-zinc-400 border px-2 py-1 rounded border-zinc-200 bg-zinc-50">v7.6 Direct Upload</span>
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
     <main class="max-w-[1600px] mx-auto p-6 flex-1 w-full overflow-hidden">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
             
@@ -56,12 +40,14 @@
                         <button id="clear-product-btn" class="text-[10px] text-zinc-400 hover:text-red-600 transition-colors hidden">清除</button>
                     </div>
                     <div id="product-upload-area" class="border border-dashed border-zinc-300 rounded-xl bg-white hover:bg-zinc-50 transition-all cursor-pointer h-32 flex flex-col items-center justify-center gap-2 group relative">
-                        <input type="file" id="product-input" class="hidden" accept="image/*">
-                        <div id="product-placeholder" class="flex flex-col items-center gap-2">
+                        <!-- ★★★ 關鍵修改：透明覆蓋層 ★★★ -->
+                        <input type="file" id="product-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" accept="image/*">
+                        
+                        <div id="product-placeholder" class="flex flex-col items-center gap-2 pointer-events-none">
                             <i data-lucide="upload" class="w-6 h-6 text-zinc-400 group-hover:text-zinc-600 transition-colors"></i>
                             <span class="text-xs text-zinc-500 font-medium">上傳商品 (去背或白底佳)</span>
                         </div>
-                        <div id="product-preview-container" class="absolute inset-0 w-full h-full hidden bg-white rounded-xl overflow-hidden border border-zinc-200">
+                        <div id="product-preview-container" class="absolute inset-0 w-full h-full hidden bg-white rounded-xl overflow-hidden border border-zinc-200 pointer-events-none">
                             <img id="product-img" class="w-full h-full object-contain p-2 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
                             <div id="product-analysis-overlay" class="absolute inset-0 bg-white/80 flex items-center justify-center hidden">
                                 <div class="flex items-center gap-2 text-zinc-600 text-xs animate-pulse"><i data-lucide="scan-eye" class="w-4 h-4"></i> 正在辨識商品...</div>
@@ -90,20 +76,23 @@
                         <button id="mode-preset-btn" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-medium transition-all text-zinc-500 hover:text-zinc-700"><i data-lucide="layout" class="w-3 h-3"></i> AI 風格預設</button>
                     </div>
 
-                    <!-- Upload Mode Content -->
                     <div id="upload-mode-content" class="space-y-3">
                         <div id="ref-upload-area" class="border border-dashed border-zinc-300 rounded-xl bg-white hover:bg-zinc-50 transition-all cursor-pointer h-32 flex flex-col items-center justify-center gap-1 group relative">
-                             <input type="file" id="ref-input" class="hidden" accept="image/*">
-                             <div id="ref-placeholder" class="flex flex-col items-center gap-1">
+                             <!-- ★★★ 關鍵修改：透明覆蓋層 ★★★ -->
+                             <input type="file" id="ref-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" accept="image/*">
+                             
+                             <div id="ref-placeholder" class="flex flex-col items-center gap-1 pointer-events-none">
                                 <i data-lucide="store" class="w-6 h-6 text-zinc-400 group-hover:text-zinc-600 transition-colors"></i>
                                 <span class="text-xs text-zinc-500 font-medium">上傳參考圖片 (店景/風格圖)</span>
                              </div>
-                             <div id="ref-preview-container" class="absolute inset-0 w-full h-full hidden bg-white rounded-xl overflow-hidden border border-zinc-300">
+                             <div id="ref-preview-container" class="absolute inset-0 w-full h-full hidden bg-white rounded-xl overflow-hidden border border-zinc-300 pointer-events-none">
                                 <img id="ref-img" class="w-full h-full object-contain p-1 bg-zinc-50">
                                 <div class="absolute top-1 right-1 bg-zinc-900/70 text-white text-[10px] px-1.5 rounded">已上傳</div>
-                                <button id="clear-ref-btn" class="absolute bottom-1 right-1 text-[10px] bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors">移除</button>
                              </div>
+                             <!-- 移除按鈕放在最上層，避免被 input 擋住 -->
+                             <button id="clear-ref-btn" class="absolute bottom-1 right-1 text-[10px] bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors z-30 hidden">移除</button>
                         </div>
+                        
                         <div id="upload-submode-container" class="bg-indigo-50 border border-indigo-100 p-2 rounded-lg hidden">
                             <label class="text-[10px] font-bold text-indigo-900 uppercase tracking-wider mb-1.5 block">此圖片用途 (Usage)</label>
                             <div class="flex gap-1">
@@ -120,7 +109,6 @@
                         </div>
                     </div>
 
-                    <!-- Preset Mode Content -->
                     <div id="preset-mode-content" class="grid grid-cols-2 gap-2 hidden"></div>
                 </section>
 
@@ -169,7 +157,6 @@
         </div>
     </main>
 
-    <!-- 關鍵修改：加上時間戳記，強迫瀏覽器讀取新檔案 -->
-    <script src="script.js?v=force_reload_75"></script>
+    <script src="script.js?v=7.6"></script>
 </body>
 </html>
