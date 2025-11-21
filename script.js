@@ -1,5 +1,5 @@
 // ================= CONFIG =================
-const API_KEY = "AIzaSyC6Bqdd4k4h_8yTmdGO9S9qWp_rz8DDPv8"; // ★請在此填入您的 Google Gemini API Key★
+const API_KEY = "AIzaSyC6Bqdd4k4h_8yTmdGO9S9qWp_rz8DDPv8"; // ★請確認您的 API Key★
 
 // ================= STATE =================
 const state = {
@@ -26,10 +26,10 @@ const SCENE_PRESETS = [
 ];
 
 const VARIATION_ANGLES = [
-    { label: "完全俯視 (Flat Lay)", instruction: "Overhead flat lay view. 90 degree top down angle." },
-    { label: "平視 (Eye Level)", instruction: "Straight eye-level view. Product sitting on surface." },
-    { label: "45度側拍 (Classic)", instruction: "Isometric 45 degree angle view. Standard product shot." },
-    { label: "側面特寫 (Detail)", instruction: "Close up macro shot. Shallow depth of field with bokeh." }
+    { label: "完全俯視 (Flat Lay)", instruction: "STRICT 90° OVERHEAD VIEW (ORTHOGRAPHIC). \nCRITICAL RULE: ELIMINATE ALL PERSPECTIVE DEPTH. Do not create a room or horizon. Treat the reference image's ground (e.g. sand, wood) as a FLAT 2D TEXTURE PATTERN (like a wallpaper or texture scan). The product must lay flat on this infinite texture. NO VANISHING POINT." },
+    { label: "平視 (Eye Level)", instruction: "STRAIGHT-ON EYE-LEVEL VIEW (0°). Lower the camera to the product's base height. The background surface should look like a flat horizontal line supporting the product. Perfect horizon alignment." },
+    { label: "45度側拍 (Classic)", instruction: "NATURAL 45° PRODUCT ANGLE. Ensure REALISTIC SCALE and DEPTH. Show the surface receding into the distance behind the product. Standard e-commerce perspective with sharp focus." },
+    { label: "側面特寫 (Detail)", instruction: "CLOSE-UP SIDE PROFILE (Detail Shot). Zoom in on the product. Use a SHALLOW DEPTH OF FIELD (f/2.8) to significantly BLUR the background into soft bokeh. Focus strictly on the product's texture and details." }
 ];
 
 // ================= INITIALIZATION =================
@@ -85,26 +85,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ================= EVENT LISTENERS =================
 
-    // 商品上傳
+    // 1. 商品上傳
     els.productInput.addEventListener('click', (e) => e.stopPropagation());
     els.productUploadArea.addEventListener('click', () => els.productInput.click());
     els.productInput.addEventListener('change', (e) => handleFile(e, 'product'));
     els.clearProductBtn.addEventListener('click', (e) => { e.stopPropagation(); clearFile('product'); });
     els.productName.addEventListener('input', (e) => { state.productName = e.target.value; });
 
-    // 參考圖上傳
+    // 2. 參考圖上傳
     els.refInput.addEventListener('click', (e) => e.stopPropagation());
     els.refUploadArea.addEventListener('click', () => els.refInput.click());
     els.refInput.addEventListener('change', (e) => handleFile(e, 'ref'));
     els.clearRefBtn.addEventListener('click', (e) => { e.stopPropagation(); clearFile('ref'); });
 
-    // 模式切換
+    // 3. 模式切換
     els.modeUploadBtn.addEventListener('click', () => { state.bgSourceMode = 'upload'; updateUI(); });
     els.modePresetBtn.addEventListener('click', () => { state.bgSourceMode = 'preset'; updateUI(); });
     els.submodeCompositeBtn.addEventListener('click', () => { state.uploadSubMode = 'composite'; updateUI(); });
     els.submodeCompositionBtn.addEventListener('click', () => { state.uploadSubMode = 'composition'; updateUI(); });
 
-    // 生成與提示詞
+    // 4. 生成與提示詞
     els.generateBtn.addEventListener('click', generateAll);
     els.customPrompt.addEventListener('input', (e) => { state.customPrompt = e.target.value; });
 
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             els.modePresetBtn.classList.remove('shadow-sm');
             els.uploadModeContent.classList.remove('hidden');
             els.presetModeContent.classList.add('hidden');
-            els.customPrompt.placeholder = "例如: 增加一點桌面反光...";
+            els.customPrompt.placeholder = "例如: 增加一點桌面反光，讓畫面亮一點...";
         } else {
             els.modeUploadBtn.classList.replace('bg-white', 'text-zinc-500');
             els.modeUploadBtn.classList.replace('text-zinc-900', 'hover:text-zinc-700');
@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUI();
     }
 
-    // ★使用穩定版 1.5-flash 進行文字辨識★
+    // ★修正：改用 gemini-1.5-flash 模型來辨識商品 (解決 403)★
     async function analyzeProductImage(base64) {
         state.isAnalyzing = true;
         updateUI();
@@ -276,12 +276,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
             if(text) {
                 const suggestions = text.split(/[,，、\n]/).map(s => s.trim()).filter(s => s.length > 0).slice(0, 3);
-                els.productSuggestions.innerHTML = suggestions.map(s => `<button onclick="window.setProductName('${s}')" class="flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[10px] hover:bg-indigo-100 transition-colors"><i data-lucide="sparkle" class="w-2.5 h-2.5"></i>${s}</button>`).join('');
+                els.productSuggestions.innerHTML = suggestions.map(s => 
+                    `<button onclick="window.setProductName('${s}')" class="flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[10px] hover:bg-indigo-100 transition-colors"><i data-lucide="sparkle" class="w-2.5 h-2.5"></i>${s}</button>`
+                ).join('');
                 if (window.lucide) window.lucide.createIcons();
             }
         } catch (e) { 
             console.error("Analysis error:", e);
-            // 這裡僅記錄，不阻擋流程
         }
         state.isAnalyzing = false;
         updateUI();
@@ -299,70 +300,67 @@ document.addEventListener('DOMContentLoaded', () => {
         els.errorMsg.classList.add('hidden');
         updateUI();
 
+        const productBase64 = state.productImage.split(',')[1];
+        const refBase64 = (state.bgSourceMode === 'upload' && state.refImage) ? state.refImage.split(',')[1] : null;
         const preset = SCENE_PRESETS[state.selectedPreset];
-        const subjectLabel = state.productName.trim() ? `the ${state.productName}` : "the product";
-        
-        // 構建 Prompt，嘗試使用 Imagen 生成
-        let prompt = `Professional product photography of ${subjectLabel}. `;
-        
-        if (state.bgSourceMode === 'upload' && state.refImage) {
-            if(state.uploadSubMode === 'composite') {
-                prompt += `Composite the product into a specific background. Maintain realistic lighting and shadows. `;
+        const subjectLabel = state.productName.trim() ? `the ${state.productName}` : "the product object from Image 1";
+        const qualityPrompt = "OUTPUT QUALITY: Photorealistic, 8k resolution, sharp focus, highly detailed texture. NO BLUR. NO ARTIFACTS.";
+
+        let mainInstruction = "";
+        if (state.bgSourceMode === 'upload' && refBase64) {
+            if (state.uploadSubMode === 'composite') {
+                mainInstruction = `TASK: High-Fidelity Composite of ${subjectLabel}.\n1. BACKGROUND: Use Image 2 exactly as is.\n2. SUBJECT: Insert ${subjectLabel} into Image 2.\n3. RELIGHTING: Re-light the product to match the lighting direction.\n4. SHADOWS: Generate deep, realistic contact shadows.\n5. NO CROPPING.\n${qualityPrompt}`;
             } else {
-                prompt += `Use the style and texture from the reference image, but replace the object with ${subjectLabel}. `;
+                mainInstruction = `TASK: High-Quality Object Swap.\nGOAL: Replace the central object in Image 2 with ${subjectLabel} from Image 1.\n1. SUBJECT: ${subjectLabel} is the ONLY hero.\n2. ERASE REFERENCE: Remove the object in Image 2.\n3. INSERT HERO: Place ${subjectLabel} there.\n4. INTEGRATION: Copy lighting and shadows.\n5. NEGATIVE PROMPT: Do not include the original object from Image 2.\n${qualityPrompt}`;
             }
         } else {
-            prompt += `Background style: ${preset.prompt}. `;
+            mainInstruction = `TASK: Professional Product Photography of ${subjectLabel}.\n1. GENERATE a background that aligns with the product's angle using style: "${preset.name}".\n2. Description: ${preset.prompt}\n3. LIGHTING: Studio-quality lighting.\n${qualityPrompt}`;
         }
-        
-        if (state.customPrompt) prompt += `Additional details: ${state.customPrompt}`;
-        prompt += " Photorealistic, 8k resolution, high quality.";
+        if (state.customPrompt) mainInstruction += `\nADDITIONAL: ${state.customPrompt}`;
 
         try {
-            // ★嘗試使用 Imagen 3 模型 (Text-to-Image)★
-            // 這是目前 Google 提供的主要繪圖 API (若您的 Key 支援)
-            const mainUrl = await callImagen(prompt);
+            // ★修正：改用 gemini-1.5-flash 模型來生成圖片 (解決 403)★
+            const mainUrl = await callGemini(mainInstruction, productBase64, refBase64, 0.25);
             state.generatedImage = mainUrl;
-            
-            // 模擬生成 4 張變體 (重複呼叫)
-            // 注意：實際應用應平行呼叫，這裡簡化邏輯
-            for (let i = 0; i < VARIATION_ANGLES.length; i++) {
-                const angle = VARIATION_ANGLES[i];
-                const varPrompt = `${prompt} Camera angle: ${angle.instruction}`;
-                // 非同步呼叫變體，不等待主圖
-                callImagen(varPrompt).then(url => {
-                    state.variations.push({ label: angle.label, url: url });
+            state.isLoading = false;
+            updateUI();
+
+            VARIATION_ANGLES.forEach(async (angle) => {
+                let varPrompt = "";
+                if (state.bgSourceMode === 'upload' && refBase64) {
+                    if (state.uploadSubMode === 'composite') {
+                        varPrompt = `TASK: RE-IMAGINE the scene from a NEW ANGLE: ${angle.label}\n1. Source: Texture from Image 2.\n2. SUBJECT: ${subjectLabel}.\n3. RE-GEOMETRY: Re-draw background to match ${angle.label}.\n4. ${angle.instruction}\n${qualityPrompt}`;
+                    } else {
+                        varPrompt = `TASK: Create a product photo of ${subjectLabel} (from Image 1).\nSTRICT: You MUST draw ${subjectLabel}.\nFORBIDDEN: DO NOT draw the object from Image 2.\nTEXTURE ONLY: Extract ONLY the ground texture from Image 2.\nFORCE ANGLE: ${angle.instruction}\n${qualityPrompt}`;
+                    }
+                } else {
+                    varPrompt = `TASK: Create a product photo of ${subjectLabel} from angle: ${angle.label}\n1. FORCE ANGLE: ${angle.instruction}\n2. Background Style: ${preset.name}\n${qualityPrompt}`;
+                }
+
+                try {
+                    const varUrl = await callGemini(varPrompt, productBase64, refBase64, 0.55);
+                    state.variations.push({ label: angle.label, url: varUrl });
                     renderVariations(els);
-                }).catch(e => console.error("Var gen error", e));
-            }
-            
+                } catch(e) { console.error(e); }
+            });
+
         } catch (e) {
-            console.error("Generation error:", e);
-            state.generatedImage = null;
-            // 顯示友善錯誤訊息
-            let msg = "生成失敗。";
-            if (e.message.includes("403") || e.message.includes("404")) {
-                msg = "您的 API Key 似乎沒有權限使用 Google 的繪圖模型 (Imagen 3)。請確認您已在 Google AI Studio 開通相關權限。";
-            } else {
-                msg = `錯誤: ${e.message}`;
-            }
-            els.errorMsg.innerText = msg;
+            state.isLoading = false;
+            els.errorMsg.innerText = "生成失敗: " + e.message + " (請檢查 Key 或網域設定)";
             els.errorMsg.classList.remove('hidden');
+            updateUI();
         }
-        
-        state.isLoading = false;
-        updateUI();
     }
 
-    // ★改用 Imagen 3 (generate-001) 端點★
-    async function callImagen(prompt) {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${API_KEY}`, {
+    // ★修正：改用 gemini-1.5-flash 模型★
+    async function callGemini(prompt, img1, img2, temp) {
+        const parts = [{ text: prompt }, { inlineData: { mimeType: "image/png", data: img1 } }];
+        if (img2) parts.push({ inlineData: { mimeType: "image/png", data: img2 } });
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                instances: [{ prompt: prompt }],
-                parameters: { sampleCount: 1 }
-            })
+            body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseModalities: ["IMAGE"], temperature: temp } })
         });
         
         if (!response.ok) {
@@ -370,9 +368,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const result = await response.json();
-        // Imagen 回傳格式解析
-        const b64 = result.predictions?.[0]?.bytesBase64Encoded;
-        if (!b64) throw new Error("No image generated");
+        const b64 = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+        if (!b64) throw new Error("No image generated (Model returned text only)");
         return `data:image/png;base64,${b64}`;
     }
 
