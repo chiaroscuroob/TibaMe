@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Product Scene Generator Pro (Fixed)</title>
+    <title>AI Product Scene Generator Pro</title>
     
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -34,7 +34,7 @@
                 <span class="font-bold text-lg tracking-tight">StudioAI <span class="font-normal text-zinc-400">| Pro</span></span>
             </div>
             <div class="flex items-center gap-4">
-                <span class="text-xs font-medium text-zinc-400 border px-2 py-1 rounded border-zinc-200 bg-zinc-50">v7.5 Cache Fixed</span>
+                <span class="text-xs font-medium text-zinc-400 border px-2 py-1 rounded border-zinc-200 bg-zinc-50">v7.5 No-Cache</span>
             </div>
         </div>
     </header>
@@ -169,7 +169,7 @@
         </div>
     </main>
 
-    <!-- 4. 引入邏輯 (加上版本號強制清除快取) -->
-    <script src="script.js?v=fixed"></script>
+    <!-- 關鍵修改：加上時間戳記，強迫瀏覽器讀取新檔案 -->
+    <script src="script.js?v=force_reload_75"></script>
 </body>
 </html>
