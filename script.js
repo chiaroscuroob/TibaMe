@@ -1,5 +1,5 @@
 // ================= CONFIG =================
-const API_KEY = "AIzaSyC6Bqdd4k4h_8yTmdGO9S9qWp_rz8DDPv8"; // ★請確認您的 API Key★
+const API_KEY = "AIzaSyBmKRijY99ofsmEeIvWC8WatTFXNN4HdPc"; // ★請確認您的 API Key★
 
 // ================= STATE =================
 const state = {
@@ -414,3 +414,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
