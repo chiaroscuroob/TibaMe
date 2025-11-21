@@ -1,7 +1,7 @@
 // ================= CONFIG =================
-// ★請確認您的 API Key★
-const API_KEY = "AIzaSyC6Bqdd4k4h_8yTmdGO9S9qWp_rz8DDPv8"; 
+const API_KEY = "AIzaSyC6Bqdd4k4h_8yTmdGO9S9qWp_rz8DDPv8"; // ★您的 API Key★
 
+// ================= STATE =================
 const state = {
     productImage: null,
     refImage: null,
@@ -82,18 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.lucide) window.lucide.createIcons();
     }
 
-    // ================= EVENT LISTENERS =================
-
-    // 1. 商品上傳
-    els.productInput.addEventListener('click', (e) => e.stopPropagation());
-    els.productUploadArea.addEventListener('click', () => els.productInput.click());
+    // 1. 商品上傳 (Input 覆蓋層，無需 click 監聽)
     els.productInput.addEventListener('change', (e) => handleFile(e, 'product'));
     els.clearProductBtn.addEventListener('click', (e) => { e.stopPropagation(); clearFile('product'); });
     els.productName.addEventListener('input', (e) => { state.productName = e.target.value; });
 
-    // 2. 參考圖上傳
-    els.refInput.addEventListener('click', (e) => e.stopPropagation());
-    els.refUploadArea.addEventListener('click', () => els.refInput.click());
+    // 2. 參考圖上傳 (Input 覆蓋層，無需 click 監聽)
     els.refInput.addEventListener('change', (e) => handleFile(e, 'ref'));
     els.clearRefBtn.addEventListener('click', (e) => { e.stopPropagation(); clearFile('ref'); });
 
@@ -107,9 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     els.generateBtn.addEventListener('click', generateAll);
     els.customPrompt.addEventListener('input', (e) => { state.customPrompt = e.target.value; });
 
-    // ================= LOGIC =================
     function updateUI() {
-        // 模式切換顯示
         if (state.bgSourceMode === 'upload') {
             els.modeUploadBtn.className = "flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-medium transition-all bg-white text-zinc-900 shadow-sm";
             els.modePresetBtn.className = "flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-medium transition-all text-zinc-500 hover:text-zinc-700";
@@ -124,33 +116,29 @@ document.addEventListener('DOMContentLoaded', () => {
             els.customPrompt.placeholder = "或輸入自定義場景描述...";
         }
 
-        // 參考圖顯示邏輯
         if (state.refImage) {
             els.refPlaceholder.classList.add('hidden'); 
             els.refPreviewContainer.classList.remove('hidden');
             els.uploadSubmodeContainer.classList.remove('hidden');
             els.refImg.src = state.refImage;
+            els.clearRefBtn.classList.remove('hidden');
         } else {
             els.refPlaceholder.classList.remove('hidden');
             els.refPreviewContainer.classList.add('hidden');
             els.uploadSubmodeContainer.classList.add('hidden');
+            els.clearRefBtn.classList.add('hidden');
         }
 
-        // 子模式按鈕樣式
-        const activeSub = "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md text-[10px] font-medium transition-all border bg-indigo-600 text-white border-indigo-600 shadow-sm";
-        const inactiveSub = "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md text-[10px] font-medium transition-all border bg-white text-zinc-500 border-zinc-200 hover:border-indigo-300";
-        
         if (state.uploadSubMode === 'composite') {
-            els.submodeCompositeBtn.className = activeSub;
-            els.submodeCompositionBtn.className = inactiveSub;
+            els.submodeCompositeBtn.className = "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md text-[10px] font-medium transition-all border bg-indigo-600 text-white border-indigo-600 shadow-sm";
+            els.submodeCompositionBtn.className = "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md text-[10px] font-medium transition-all border bg-white text-zinc-500 border-zinc-200 hover:border-indigo-300";
             els.submodeDesc.innerText = "• 適合空景照片。AI 會保留照片中的桌子/空間，直接把商品放進去。";
         } else {
-            els.submodeCompositeBtn.className = inactiveSub;
-            els.submodeCompositionBtn.className = activeSub;
+            els.submodeCompositeBtn.className = "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md text-[10px] font-medium transition-all border bg-white text-zinc-500 border-zinc-200 hover:border-indigo-300";
+            els.submodeCompositionBtn.className = "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-md text-[10px] font-medium transition-all border bg-indigo-600 text-white border-indigo-600 shadow-sm";
             els.submodeDesc.innerText = "• 適合有雜物的照片。AI 會將照片當作「構圖模版」，移除中間物體並填入您的商品。";
         }
 
-        // 生成按鈕狀態
         const canGenerate = state.productImage && (state.bgSourceMode === 'preset' || (state.bgSourceMode === 'upload' && state.refImage)) && !state.isLoading;
         els.generateBtn.disabled = !canGenerate;
         if (canGenerate) {
@@ -161,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
             els.generateBtn.classList.remove('bg-zinc-900', 'text-white', 'hover:bg-zinc-800');
         }
 
-        // 按鈕文字
         if (state.bgSourceMode === 'upload') {
             els.generateBtnText.innerText = state.uploadSubMode === 'composite' ? "合成至背景 + 4視角" : "替換主體 + 4視角";
             els.previewTitle.innerText = state.uploadSubMode === 'composite' ? "Composite Result" : "Swap Result";
@@ -170,20 +157,20 @@ document.addEventListener('DOMContentLoaded', () => {
             els.previewTitle.innerText = "AI Generated Result";
         }
 
-        // 商品圖預覽
         if (state.productImage) {
+            els.productInput.classList.add('hidden');
             els.productPlaceholder.classList.add('hidden');
             els.productPreviewContainer.classList.remove('hidden');
             els.productImg.src = state.productImage;
             els.clearProductBtn.classList.remove('hidden');
         } else {
+            els.productInput.classList.remove('hidden');
             els.productPlaceholder.classList.remove('hidden');
             els.productPreviewContainer.classList.add('hidden');
             els.productImg.src = "";
             els.clearProductBtn.classList.add('hidden');
         }
 
-        // Loading 狀態
         if (state.isLoading) {
             els.generateBtnText.innerText = "AI 運算中...";
             els.previewEmpty.classList.add('hidden');
@@ -257,12 +244,12 @@ document.addEventListener('DOMContentLoaded', () => {
         updateUI();
     }
 
-    // ★修正：改用 gemini-1.5-flash 模型來辨識商品 (解決 403)★
     async function analyzeProductImage(base64) {
         state.isAnalyzing = true;
         updateUI();
         try {
             const base64Data = base64.split(',')[1];
+            // 使用 1.5-flash 辨識 (最穩定)
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -270,9 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     contents: [{ role: "user", parts: [{ text: "Identify the main product in this image. Provide 3 short, concise labels for it in Traditional Chinese. Return ONLY the 3 labels separated by commas." }, { inlineData: { mimeType: "image/png", data: base64Data } }] }]
                 })
             });
-            
-            if (!response.ok) throw new Error(`API Error ${response.status}`);
-            
             const result = await response.json();
             const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
             if(text) {
@@ -282,9 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ).join('');
                 if (window.lucide) window.lucide.createIcons();
             }
-        } catch (e) { 
-            console.error("Analysis error:", e);
-        }
+        } catch (e) { console.error(e); }
         state.isAnalyzing = false;
         updateUI();
     }
@@ -320,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.customPrompt) mainInstruction += `\nADDITIONAL: ${state.customPrompt}`;
 
         try {
-            // ★修正：改用 gemini-1.5-flash 模型來生成圖片 (解決 403)★
+            // 回復使用 2.5-flash-image-preview (這是昨天成功的版本)
             const mainUrl = await callGemini(mainInstruction, productBase64, refBase64, 0.25);
             state.generatedImage = mainUrl;
             state.isLoading = false;
@@ -347,30 +329,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (e) {
             state.isLoading = false;
-            els.errorMsg.innerText = "生成失敗: " + e.message + " (請檢查 Key 或網域設定)";
+            els.errorMsg.innerText = "生成失敗 (請檢查API Key或模型權限)";
             els.errorMsg.classList.remove('hidden');
             updateUI();
+            console.error(e);
         }
     }
 
-    // ★修正：改用 gemini-1.5-flash 模型★
     async function callGemini(prompt, img1, img2, temp) {
         const parts = [{ text: prompt }, { inlineData: { mimeType: "image/png", data: img1 } }];
         if (img2) parts.push({ inlineData: { mimeType: "image/png", data: img2 } });
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+        // 回復使用 gemini-2.5-flash-image-preview
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseModalities: ["IMAGE"], temperature: temp } })
+            body: JSON.stringify({
+                contents: [{ parts }],
+                generationConfig: { responseModalities: ["IMAGE"], temperature: temp }
+            })
         });
         
-        if (!response.ok) {
-            throw new Error(`API Error ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`API Error ${response.status}`);
         
         const result = await response.json();
         const b64 = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-        if (!b64) throw new Error("No image generated (Model returned text only)");
+        if (!b64) throw new Error("No image generated");
         return `data:image/png;base64,${b64}`;
     }
 
