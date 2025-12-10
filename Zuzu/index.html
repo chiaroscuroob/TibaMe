@@ -1,0 +1,2372 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  MessageSquare, 
+  Calendar as CalendarIcon, 
+  Users, 
+  LayoutDashboard, 
+  CheckCircle, 
+  Send, 
+  Sparkles, 
+  Clock, 
+  TrendingUp,
+  Settings,
+  Bell,
+  Edit3,
+  Search,
+  MoreHorizontal,
+  ThumbsUp,
+  Instagram,
+  ChevronLeft,
+  ChevronRight,
+  Phone,
+  Mail,
+  X,
+  Globe,
+  RefreshCw,
+  FileText,     
+  Database,     
+  AlertCircle,
+  Save,
+  Bot,
+  MessageCircle,
+  ArrowUpRight,
+  MapPin,
+  Filter,
+  List,
+  Image as ImageIcon,
+  UploadCloud,
+  Loader2,
+  BarChart2,
+  Zap,
+  Award,
+  ClipboardList,
+  Info,
+  Lightbulb,
+  DollarSign,
+  PieChart,
+  CreditCard,
+  Gift,
+  Link as LinkIcon,
+  BrainCircuit,
+  TrendingDown,
+  AlertTriangle,
+  Target,
+  ExternalLink,
+  CalendarPlus,
+  Plug, 
+  CheckSquare, 
+  Home,
+  Megaphone, // For Marketing Messages
+  UserPlus,  // For Influencers
+  MousePointer2, // For Ads
+  ShoppingCart, // For Shopify
+  Workflow, // For Zapier
+  Mail as MailIcon // For Mailchimp
+} from 'lucide-react';
+
+// --- API CONFIGURATION ---
+const apiKey = ""; // API key is injected by the environment
+
+async function callGemini(prompt) {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        }),
+      }
+    );
+    
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Gemini API Error:", errorData);
+        throw new Error("API request failed");
+    }
+
+    const data = await response.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "AI 暫時無法回應，請稍後再試。";
+  } catch (error) {
+    console.error("Error calling Gemini:", error);
+    return "AI 連線異常，請檢查網路或 API 設定。";
+  }
+}
+
+// --- 1. Logo Component ---
+const ZuZuLogo = ({ size = 40 }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="30" cy="50" r="28" fill="#F97316" />
+    <circle cx="70" cy="50" r="28" fill="#FACC15" fillOpacity="0.9" style={{ mixBlendMode: 'normal' }} /> 
+    <circle cx="22" cy="45" r="4" fill="white" />
+    <circle cx="38" cy="45" r="4" fill="white" />
+    <circle cx="62" cy="45" r="4" fill="white" />
+    <circle cx="78" cy="45" r="4" fill="white" />
+    <path d="M22 62 Q 50 85 78 62" stroke="white" strokeWidth="5" strokeLinecap="round" />
+    <path d="M90 15 L92 20 L97 22 L92 24 L90 29 L88 24 L83 22 L88 20 Z" fill="#F97316" />
+    <path d="M95 35 L96 37 L98 38 L96 39 L95 41 L94 39 L92 38 L94 37 Z" fill="#FACC15" />
+  </svg>
+);
+
+// --- Icons ---
+const PlatformIcon = ({ platform }) => {
+  switch (platform) {
+    case 'Instagram': return <Instagram className="w-3 h-3 text-pink-600" />;
+    case 'Threads': return <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 text-black"><path d="M12.012 1.625C6.188 1.625 1.625 6.275 1.625 12.012S6.275 22.4 12.012 22.4c5.738 0 10.388-4.65 10.388-10.388 0-1.163-.175-2.287-.5-3.362-.2-.688-.863-1.075-1.55-.863-.688.2-1.075.863-.863 1.55.263.863.4 1.775.4 2.7 0 4.413-3.575 7.988-7.988 7.988-4.413 0-7.988-3.575-7.988-7.988 0-4.413 3.575-7.988 7.988-7.988.75 0 1.488.1 2.2.3.837.237 1.7.025 2.287-.563.587-.587.8-1.45.563-2.287-.5-1.75-2.113-3-4.013-3-2.3 0-4.175 1.875-4.175 4.175v.2c0 .825.675 1.5 1.5 1.5.825 0 1.5-.675 1.5-1.5v-.2c0-.65.525-1.175 1.175-1.175.65 0 1.175.525 1.175 1.175 0 1.275-1.037 2.313-2.313 2.313-1.275 0-2.313-1.037-2.313-2.313 0-3.95 3.213-7.175 7.175-7.175s7.175 3.213 7.175 7.175c0 3.95-3.213 7.175-7.175 7.175-3.95 0-7.175-3.213-7.175-7.175 0-3.95 3.213-7.175 7.175-7.175z" /></svg>;
+    case 'LINE': default: return <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center text-[8px] text-white font-bold">L</div>;
+  }
+};
+
+// --- DATA ---
+const CURRENT_DATE = "2025-11-14";
+
+const INITIAL_MESSAGES = [
+  { 
+    id: 101, 
+    client: "Kevin 林", 
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Kevin", 
+    platform: "Threads", 
+    lastMessage: "你們的系統可以串接 Notion 嗎？", 
+    time: "5分鐘前", 
+    status: "pending_review", 
+    aiDraftIndex: 0, 
+    history: [
+      { sender: "client", text: "你們的系統可以串接 Notion 嗎？我在 Threads 上看到介紹覺得很酷！", time: "10:30" }
+    ] 
+  },
+  { id: 102, client: "Jessica Wang", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jessica", platform: "LINE", lastMessage: "我想預約下週三下午兩點的線上諮詢。", time: "35分鐘前", status: "pending_review", aiDraftIndex: 0, history: [{ sender: "client", text: "我想預約下週三下午兩點的線上諮詢。", time: "10:00" }] },
+  { id: 103, client: "Bella", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bella", platform: "Instagram", lastMessage: "太棒了！感謝你的推薦！", time: "1小時前", status: "replied", aiDraftIndex: 0, history: [{ sender: "client", text: "請問有適合美妝產業的自動化範例嗎？想了解～", time: "09:15" }, { sender: "ai", text: "Bella 妳好！💄 我們有專門為美業/美妝設計的自動化流程喔！包含自動發送作品集、預約提醒等等。", time: "09:16" }, { sender: "client", text: "太棒了！感謝你的推薦！", time: "09:20" }] },
+  { id: 104, client: "Tom Wu", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tom", platform: "LINE", lastMessage: "請問工作室地點在哪裡？", time: "2小時前", status: "replied", aiDraftIndex: 0, history: [{ sender: "client", text: "請問工作室地點在哪裡？", time: "08:30" }, { sender: "ai", text: "Tom 您好，我們位於台北市大安區信義路三段 100 號，捷運大安森林公園站出口步行 3 分鐘即可抵達 📍", time: "08:30" }] },
+  { id: 105, client: "Amy", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Amy", platform: "Instagram", lastMessage: "我想詢問關於「美業專用包」的價格。", time: "3小時前", status: "pending_review", aiDraftIndex: 0, history: [{ sender: "client", text: "我想詢問關於「美業專用包」的價格。", time: "07:45" }] },
+];
+
+const AI_DRAFT_VARIANTS = {
+  101: ["嗨 Kevin！👋 沒問題，ZuZu 透過 n8n 可以輕鬆將資料寫入 Notion 資料庫。這週方便約個時間展示給您看嗎？😊"],
+  102: ["Jessica 您好，感謝預約！下週三 14:00 的諮詢時間沒問題。會議連結會透過 Email 寄給您。期待與您討論！🚀"],
+  105: ["Amy 您好！💅 我們的「美業專用包」目前有早鳥優惠 NT$12,000 (含一次性設定費)。這個方案包含預約系統、作品集推播與術後關懷模組。有興趣了解更多功能嗎？"]
+};
+
+const CLIENTS_DB = [
+  { id: 1, name: "Kevin 林", phone: "0912-345-678", email: "kevin@tech.com", company: "個人接案設計師", status: "洽談中", lastContact: "2025-11-14", source: "Threads", totalSpent: 0, visits: 1, tags: ["對 n8n 有興趣", "預算充足"], industry: "設計", plan: "Lite", notes: "客戶對 Notion 串接有高度興趣。", history: [{date: "2025-11-14", event: "Threads 私訊"}] },
+  { id: 2, name: "Jessica Wang", phone: "0988-777-666", email: "jessica@studio.com", company: "晨曦瑜珈工作室", status: "已簽約", lastContact: "2025-11-14", source: "LINE 搜尋", totalSpent: 12000, visits: 5, tags: ["急需預約功能", "Pro 方案", "高價值"], industry: "運動/健康", plan: "Pro", notes: "旧 Email 可能已停用，待确认。", history: [{date: "2025-11-14", event: "填寫諮詢問卷"}] },
+  { id: 3, name: "Bella", phone: "0922-333-444", email: "bella@fashion.tw", company: "自媒體", status: "潛在", lastContact: "2025-11-14", source: "Instagram", totalSpent: 0, visits: 1, tags: ["IG 網紅", "美妝", "互惠合作"], industry: "媒體", plan: "None", notes: "詢問美業自動化案例，考慮互惠推廣。", history: [{date: "2025-11-14", event: "IG 私訊"}] },
+  { id: 4, name: "Tom Wu", phone: "0955-123-456", email: "tom@gmail.com", company: "自由業", status: "潛在", lastContact: "2025-11-14", source: "LINE", totalSpent: 0, visits: 1, tags: ["諮詢地點"], industry: "其他", plan: "None", notes: "詢問交通方式。", history: [{date: "2025-11-14", event: "LINE 詢問"}] },
+  { id: 5, name: "Amy", phone: "0966-888-999", email: "amy@nail.studio", company: "艾咪美甲", status: "洽談中", lastContact: "2025-11-14", source: "Instagram", totalSpent: 0, visits: 1, tags: ["美業", "詢價"], industry: "美業", plan: "Lite", notes: "對價格敏感。", history: [{date: "2025-11-14", event: "IG 詢價"}] },
+  { id: 6, name: "Mike 健身教練", phone: "0911-222-333", email: "mike@gym.com", company: "Mike Fitness", status: "已簽約", lastContact: "2025-11-13", source: "Instagram", totalSpent: 24000, visits: 8, tags: ["健身", "自動排課"], industry: "運動/健康", plan: "Pro", notes: "滿意度高。", history: [{date: "2025-11-13", event: "系統設定完成"}] }
+];
+
+const ALL_DATA = [
+  { id: 1, date: "2025-11-14", time: "10:00", client: "Kevin 林", service: "系統架構諮詢", status: "upcoming", industry: "設計", plan: "Lite", payment: "unpaid", amount: 1500, method: "轉帳" },
+  { id: 2, date: "2025-11-14", time: "14:00", client: "Jessica Wang", service: "ZuZu 導入教學", status: "confirmed", industry: "運動/健康", plan: "Pro", payment: "paid", amount: 3000, method: "LINE Pay" },
+  { id: 3, date: "2025-11-14", time: "16:00", client: "Bella", service: "美業自動化Demo", status: "pending", industry: "媒體", plan: "None", payment: "unpaid", amount: 0, method: "-" },
+  { id: 4, date: "2025-11-15", time: "11:00", client: "Tom Wu", service: "現場諮詢", status: "upcoming", industry: "其他", plan: "None", payment: "unpaid", amount: 1500, method: "現金" },
+  { id: 5, date: "2025-11-16", time: "15:00", client: "Sarah 陳", service: "進階功能設定", status: "confirmed", industry: "設計", plan: "Pro", payment: "paid", amount: 5000, method: "信用卡" },
+  { id: 6, date: "2025-11-18", time: "13:30", client: "Mike 健身教練", service: "定期回訪", status: "confirmed", industry: "運動/健康", plan: "Pro", payment: "paid", amount: 0, method: "-" },
+  { id: 7, date: "2025-11-05", time: "10:00", client: "Amy", service: "美業諮詢", status: "completed", industry: "美業", plan: "Lite", payment: "paid", amount: 1500, method: "LINE Pay" },
+  { id: 8, date: "2025-11-08", time: "14:00", client: "Mike", service: "系統設定", status: "completed", industry: "運動/健康", plan: "Pro", payment: "paid", amount: 3000, method: "轉帳" },
+];
+
+const CRAWLED_ARTICLES = [
+  { id: 1, sourceType: 'news', source: "TechNews 科技新報", title: "2025 年十大 N8N 自動化趨勢", summary: "探討 AI Agent 結合 n8n 如何在客戶服務、行銷自動化領域節省 80% 人力成本...", date: "2025-11-13", tags: ["自動化", "AI趨勢"], content: "隨著 AI 技術的成熟，No-Code 自動化工具 n8n 正成為一人公司的首選。本文將深入探討如何利用 n8n 串接 OpenAI 與 LINE，實現全自動化的客戶服務流程。\n\n1. 自動化客服：\n透過 n8n 的 AI Agent 節點，可以讓 LINE 官方帳號具備 24 小時回應能力，不再錯失任何潛在客戶。\n\n2. 跨平台整合：\n除了 LINE，n8n 還能輕鬆串接 Google Calendar、Notion、Stripe 等工具，將預約、記錄、收款流程一氣呵成。\n\n3. 低成本高效率：\n相比聘請真人助理，自動化系統的運行成本極低，且不會有情緒波動或請假問題，是微型創業者的最佳夥伴。" },
+  { id: 2, sourceType: 'news', source: "Medium - Automation Hacks", title: "如何使用 n8n 串接 Google Calendar？", summary: "不需要寫程式，透過 Webhook 就能實現 LINE 預約自動寫入行事曆...", date: "2025-11-12", tags: ["教學", "n8n"], content: "許多自由接案者都面臨著預約管理的困擾。本文將手把手教你如何使用 n8n 的 Google Calendar 節點。\n\n步驟一：獲取 API 權限\n首先，你需要到 Google Cloud Platform 申請 Calendar API 的權限，並獲取 OAuth Client ID。\n\n步驟二：設定 Webhook\n在 n8n 中建立一個 Webhook 節點，用來接收來自 LINE 的預約請求資料。\n\n步驟三：資料寫入\n將接收到的日期與時間，透過 Google Calendar 節點寫入你的行事曆。這樣一來，當客戶在 LINE 上確認預約時，你的行事曆就會自動更新了！" }
+];
+
+const RECOMMENDED_PRODUCTS = [
+  { id: 1, name: "Notion 專案管理模組", price: 3000, img: "https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png", desc: "自動同步客戶資料與進度" },
+  { id: 2, name: "LINE 官方帳號進階版", price: 5000, img: "https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg", desc: "包含圖文選單與分眾標籤" },
+  { id: 3, name: "IG 貼文自動生成器", price: 4500, img: "https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png", desc: "一鍵產出高質感貼文" }
+];
+
+// --- Main Component ---
+
+export default function ZuZuDashboard() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [selectedMsgId, setSelectedMsgId] = useState(101);
+  const [notification, setNotification] = useState(null);
+  
+  // Inbox State
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [manualInput, setManualInput] = useState("");
+  const [isPolishing, setIsPolishing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // CRM State & Filters
+  const [clients, setClients] = useState(CLIENTS_DB);
+  const [showClientModal, setShowClientModal] = useState(null);
+  const [isEditingClient, setIsEditingClient] = useState(false);
+  const [editingClientData, setEditingClientData] = useState({});
+  const [crmStatusFilter, setCrmStatusFilter] = useState('all');
+  const [crmTagFilter, setCrmTagFilter] = useState('all');
+  const [crmSort, setCrmSort] = useState('recent');
+
+  // Calendar State
+  const [calendarView, setCalendarView] = useState('week');
+
+  // Orders State & Filters
+  const [orderFilterStatus, setOrderFilterStatus] = useState('all');
+  const [orderFilterIndustry, setOrderFilterIndustry] = useState('all');
+  const [orderFilterDate, setOrderFilterDate] = useState('all');
+
+  // Finance State & Filters
+  const [financeFilterStatus, setFinanceFilterStatus] = useState('all');
+  const [financeFilterDate, setFinanceFilterDate] = useState('all');
+
+  // Marketing State (Refactored)
+  const [marketingSubTab, setMarketingSubTab] = useState('messages'); // messages, copywriting, ads, influencers
+  const [marketingSource, setMarketingSource] = useState('all'); 
+  const [marketingStep, setMarketingStep] = useState('crawler'); 
+  const [generatedPost, setGeneratedPost] = useState("");
+  const [inspirationInput, setInspirationInput] = useState("");
+  const [showArticleModal, setShowArticleModal] = useState(null);
+  const [marketingCategory, setMarketingCategory] = useState('trends'); // For copywriting subtab
+
+  // Marketing - Broadcast
+  const [broadcastTag, setBroadcastTag] = useState("all");
+  const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  // Analysis State
+  const [showReengagementModal, setShowReengagementModal] = useState(null);
+  const [generatedReengagementMsg, setGeneratedReengagementMsg] = useState("");
+
+  // Owner Setup Survey State
+  const [ownerConfig, setOwnerConfig] = useState({
+    services: "",
+    rules: "",
+    tone: "",
+    links: "",
+    qa_supplement: "",
+    service_intro: "",
+    notes: "",
+    isSubmitted: false
+  });
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const [imageAnalysisStep, setImageAnalysisStep] = useState("");
+  const [isAnalyzingChat, setIsAnalyzingChat] = useState(false);
+
+  // Onboarding & Integrations
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [showOnboarding, setShowOnboarding] = useState(true);
+
+  // Settings Modal
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  const textareaRef = useRef(null);
+  const chatEndRef = useRef(null);
+  const inputRef = useRef(null); 
+  const selectedMsg = messages.find(m => m.id === selectedMsgId);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selectedMsg?.history]);
+
+  // --- Actions ---
+
+  const showNotification = (text) => {
+    setNotification(text);
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleRefineDraft = async (id) => {
+    if (!aiInstruction.trim()) return;
+    setIsRegenerating(true);
+    const msg = messages.find(m => m.id === id);
+    const originalDraft = getCurrentDraft(msg);
+    const prompt = `你是微型企業主的 AI 助理。請根據以下指示重寫這段草稿：指示「${aiInstruction}」。原草稿：「${originalDraft}」。請保持語氣${ownerConfig.tone || '親切專業'}。直接輸出重寫後的內容，不要有前言。`;
+    const newDraft = await callGemini(prompt);
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === id) {
+        return { ...msg, aiDraft: newDraft, aiDraftIndex: -1 };
+      }
+      return msg;
+    }));
+    setAiInstruction("");
+    setIsRegenerating(false);
+    showNotification("AI 已根據指令重新潤飾草稿！✨");
+  };
+
+  const handleGenerateManualInput = async () => {
+    setIsPolishing(true);
+    const historyContext = selectedMsg.history.slice(-3).map(h => `${h.sender}: ${h.text}`).join("\n");
+    const userInput = manualInput.trim();
+    const prompt = `
+      你是客服 AI 助理。請根據以下對話紀錄與使用者輸入，生成一段完整、禮貌的回覆。
+      [對話紀錄]
+      ${historyContext}
+      [使用者輸入/關鍵字]
+      ${userInput || "(無輸入，請根據上文生成合適的後續回應)"}
+      [指令]
+      如果使用者輸入了內容，請將其延展為完整語句。
+      如果使用者未輸入，請根據對話紀錄生成一段貼心的關懷或服務推廣。
+      語氣：${ownerConfig.tone || '親切、專業'}。
+      請直接輸出回覆內容，不要有任何說明。
+    `;
+    const suggestion = await callGemini(prompt);
+    setManualInput(suggestion);
+    // Auto Resize after AI generation
+    setTimeout(() => {
+        if(inputRef.current) {
+            inputRef.current.style.height = 'auto';
+            inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 150)}px`;
+        }
+    }, 100);
+    setIsPolishing(false);
+    showNotification("AI 已生成建議訊息！");
+  };
+
+  const handleSendMessage = (id) => {
+    const msgToSend = getCurrentDraft(messages.find(m => m.id === id));
+    const now = new Date();
+    const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === id) {
+        const isAppointment = msgToSend.includes("確認") || msgToSend.includes("預約");
+        return { 
+          ...msg, 
+          status: 'replied',
+          lastMessage: `You: ${msgToSend.substring(0, 20)}...`, 
+          history: [
+              ...msg.history, 
+              { sender: 'ai', text: msgToSend, time: timeString },
+              ...(isAppointment ? [{ type: 'system', text: '預約已確認', showCalendarBtn: true }] : [])
+          ]
+        };
+      }
+      return msg;
+    }));
+    showNotification(`訊息已傳送至 ${messages.find(m => m.id === id).platform} ✅`);
+  };
+
+  const handleAddToCalendar = () => {
+      showNotification("已開啟 Google Calendar 並加入行程 📅");
+  };
+
+  const handleManualSend = (id) => {
+    if (!manualInput.trim()) return;
+    const now = new Date();
+    const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    setMessages(prev => prev.map(msg => {
+        if (msg.id === id) {
+            const isAppointment = manualInput.includes("確認") || manualInput.includes("預約") || manualInput.includes("沒問題");
+            return {
+                ...msg,
+                lastMessage: `You: ${manualInput.substring(0, 20)}...`,
+                history: [
+                    ...msg.history, 
+                    { sender: 'ai', text: manualInput, time: timeString },
+                    ...(isAppointment ? [{ type: 'system', text: '預約已確認', showCalendarBtn: true }] : [])
+                ]
+            };
+        }
+        return msg;
+    }));
+    setManualInput("");
+    if(inputRef.current) inputRef.current.style.height = 'auto'; // Reset height
+  };
+
+  const handleDraftEdit = (id, newText) => {
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === id) {
+        return { ...msg, aiDraft: newText, aiDraftIndex: -1 };
+      }
+      return msg;
+    }));
+  };
+
+  const handleRecommendProduct = (id) => {
+    const recommendationMsg = `您好！根據您的需求（自動化管理、提升效率），推薦您以下幾款我們的熱門模組，能有效減少行政負擔喔！✨\n\n` + 
+      RECOMMENDED_PRODUCTS.map(p => `• ${p.name} - NT$${p.price}`).join('\n');
+    setMessages(prev => prev.map(msg => {
+        if (msg.id === id) {
+            return {
+                ...msg,
+                aiDraft: recommendationMsg,
+                aiDraftIndex: -1 
+            };
+        }
+        return msg;
+    }));
+    showNotification("AI 已生成服務推薦方案！🎁");
+  };
+
+  const handleJumpToChat = (clientName) => {
+    const existingMsg = messages.find(m => m.client === clientName);
+    setShowClientModal(null); 
+    if (existingMsg) {
+      setSelectedMsgId(existingMsg.id);
+      setActiveTab('inbox');
+      showNotification(`已跳轉至與 ${clientName} 的對話 💬`);
+    } else {
+      showNotification(`暫無 ${clientName} 的近期對話紀錄`);
+    }
+  };
+
+  const handleViewClientDetail = (client) => {
+    if (client) {
+      setEditingClientData({ ...client });
+      setIsEditingClient(false);
+      setShowClientModal(client);
+    } else {
+      showNotification("查無此客戶資料");
+    }
+  };
+
+  const handleSaveClientData = () => {
+    setClients(prev => prev.map(c => c.id === editingClientData.id ? editingClientData : c));
+    setShowClientModal(editingClientData); 
+    setIsEditingClient(false);
+    showNotification("客戶資料更新成功！💾");
+  };
+
+  const handleGeneratePost = async (item, type) => {
+    setMarketingStep('loading');
+    let prompt = "";
+    if (type === 'trends') {
+      prompt = `請為這篇產業新聞撰寫一篇吸引人的社群貼文 (Instagram/Threads)。新聞標題：${item.title}。摘要：${item.summary}。風格：專業、有洞見。請加入表情符號與 Hashtags。`;
+    } else if (type === 'inspiration') {
+      prompt = `請根據這段創業小故事，撰寫一篇引起共鳴的社群貼文：${inspirationInput}。風格：感性、啟發性。請加入表情符號與 Hashtags。`;
+    } else if (type === 'success') {
+      prompt = `請撰寫一篇客戶成功案例貼文。客戶：${item.company} (${item.name})。痛點：${item.notes}。解決方案：${item.plan} 方案。風格：慶祝、專業見證。`;
+    } else if (type === 'features') {
+      prompt = `請撰寫一篇推廣功能的貼文。功能名稱：${item.title}。描述：${item.desc}。解決痛點：${item.painPoint}。風格：銷售導向、強調效率。`;
+    }
+    const content = await callGemini(prompt);
+    setGeneratedPost(content);
+    setMarketingStep('editor');
+  };
+
+  const handlePublishPost = () => {
+    setMarketingStep('done');
+    showNotification("貼文已排程發佈至 Instagram 與 Threads 🚀");
+    setTimeout(() => {
+        setMarketingStep('crawler');
+        setInspirationInput("");
+    }, 2000);
+  };
+
+  const handleBroadcast = () => {
+      setIsBroadcasting(true);
+      const targetClients = broadcastTag === 'all' 
+          ? clients 
+          : clients.filter(c => c.tags.includes(broadcastTag));
+      
+      const count = targetClients.length;
+      
+      setTimeout(() => {
+          // UPDATE MESSAGE HISTORY TO SIMULATE SENDING
+          const now = new Date();
+          const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+          setMessages(prevMessages => {
+            const updatedMessages = [...prevMessages];
+            targetClients.forEach(client => {
+                const msgIndex = updatedMessages.findIndex(m => m.client === client.name);
+                if (msgIndex !== -1) {
+                    updatedMessages[msgIndex] = {
+                        ...updatedMessages[msgIndex],
+                        status: 'replied',
+                        lastMessage: `You: ${broadcastMsg.substring(0, 15)}...`,
+                        history: [
+                            ...updatedMessages[msgIndex].history,
+                            { sender: 'ai', text: broadcastMsg, time: timeString }
+                        ]
+                    };
+                }
+            });
+            return updatedMessages;
+          });
+
+          setIsBroadcasting(false);
+          setBroadcastMsg("");
+          showNotification(`成功發送訊息給 ${count} 位客戶！已更新收件匣紀錄 📢`);
+      }, 1500);
+  };
+
+  const handleImageUpload = (e) => {
+    setIsAnalyzingImage(true);
+    setImageAnalysisStep("掃描圖片中...");
+    setTimeout(() => setImageAnalysisStep("進行 OCR 文字提取..."), 1000);
+    setTimeout(() => setImageAnalysisStep("結構化數據轉換..."), 2000);
+    setTimeout(() => {
+      setIsAnalyzingImage(false);
+      setImageAnalysisStep("");
+      setOwnerConfig(prev => ({
+        ...prev,
+        services: "Fish Nail Studio\n--- 手部健甲型凝膠 ---\n單色: NT.1000\n貓眼: NT.1200\n漸層/璀璨: NT.1300\n法式: NT.1400\n(足部價位 +NT.200)\n凝膠延甲: NT.150/指\n\n--- 卸甲 ---\n本店作品 單純卸甲: NT.300 / 卸甲重做: NT.300\n他店作品 單純卸甲: NT.500 / 卸甲重做: NT.400\n(不可卸/水晶一律NT.600)\n(純卸甲皆含拋光/硬甲油)\n(足部價位+NT.100)\n\n--- 保養 ---\n基礎保養手/足: NT.500/800\n足部硬繭保養: NT.1100\n足部水嫩保養: NT.1500\n足部深層保養: NT.2200\n足部加購單色凝膠: NT.400\n\n--- 美睫 ---\n單根式: NT.6/根\n多根式: NT.5/根\n(最少300根)"
+      }));
+      showNotification("AI 辨識完成！已自動將圖片轉為價目表。✨");
+    }, 3000);
+  };
+
+  const handleChatUpload = (e) => {
+      setIsAnalyzingChat(true);
+      setTimeout(() => {
+          setIsAnalyzingChat(false);
+          setOwnerConfig(prev => ({
+              ...prev,
+              tone: "親切、活潑、習慣用「～」結尾、常用 😊 符號"
+          }));
+          showNotification("AI 已分析完畢，調整了回覆語氣設定！🗣️");
+      }, 1500);
+  };
+
+  const handleSaveConfig = () => {
+    setOwnerConfig(prev => ({ ...prev, isSubmitted: true }));
+    showNotification("AI 知識庫已更新！助手將依據新規則回應客戶。");
+  };
+
+  const handleGenerateReengagement = async (client) => {
+      const prompt = `請為這位客戶撰寫一則喚醒訊息 (Re-engagement Message)。客戶姓名：${client.name}。上次互動：${client.lastContact}。產業：${client.industry}。推廣重點：我們新推出了「自動化發票開立」功能。語氣：${ownerConfig.tone || '親切、不打擾'}。直接輸出訊息內容。`;
+      const msg = await callGemini(prompt);
+      setGeneratedReengagementMsg(msg);
+      setShowReengagementModal(client);
+  };
+
+  const getCurrentDraft = (msg) => {
+    if (typeof msg.aiDraft === 'string') return msg.aiDraft; 
+    const variants = AI_DRAFT_VARIANTS[msg.id];
+    if (variants && variants.length > 0) return variants[msg.aiDraftIndex];
+    return "（AI 正在思考中...）";
+  };
+
+  const handleManualEditClick = () => {
+    if (textareaRef.current) {
+        textareaRef.current.focus();
+    }
+  };
+
+  // Textarea Auto Resize
+  const handleInputResize = (e) => {
+    setManualInput(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
+  };
+
+  // Filtered Lists
+  const filteredMessages = messages.filter(m => 
+    m.client.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    m.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const filteredArticles = CRAWLED_ARTICLES.filter(article => {
+      if (marketingSource === 'all') return true;
+      return article.sourceType === marketingSource;
+  });
+
+  const filteredOrders = ALL_DATA.filter(apt => {
+    const matchStatus = orderFilterStatus === 'all' || (orderFilterStatus === 'paid' ? apt.payment === 'paid' : apt.payment === 'unpaid');
+    const matchIndustry = orderFilterIndustry === 'all' || apt.industry === orderFilterIndustry;
+    const matchDate = orderFilterDate === 'all' || apt.date === orderFilterDate;
+    return matchStatus && matchIndustry && matchDate;
+  });
+
+  const filteredFinanceData = ALL_DATA.filter(apt => {
+    const isNov = apt.date.includes("2025-11");
+    const matchDate = financeFilterDate === 'all' || (financeFilterDate === 'current' && isNov);
+    const matchStatus = financeFilterStatus === 'all' || (financeFilterStatus === 'paid' ? apt.payment === 'paid' : apt.payment === 'unpaid');
+    return matchDate && matchStatus && apt.amount > 0;
+  });
+
+  const filteredClients = clients.filter(client => {
+    const matchStatus = crmStatusFilter === 'all' || client.status === crmStatusFilter;
+    const matchTag = crmTagFilter === 'all' || client.tags.includes(crmTagFilter);
+    return matchStatus && matchTag;
+  }).sort((a, b) => {
+    if (crmSort === 'recent') return new Date(b.lastContact) - new Date(a.lastContact);
+    if (crmSort === 'oldest') return new Date(a.lastContact) - new Date(b.lastContact);
+    return 0;
+  });
+
+  const uniqueIndustries = [...new Set(ALL_DATA.map(a => a.industry))];
+  const uniqueDates = [...new Set(ALL_DATA.map(a => a.date))];
+  const uniqueClientTags = [...new Set(clients.flatMap(c => c.tags))];
+
+  return (
+    <div className="min-h-screen bg-[#FDFBF7] font-sans flex text-slate-800 selection:bg-orange-100">
+      
+      {/* Sidebar for Desktop */}
+      <aside className="w-64 bg-white border-r border-slate-100 hidden md:flex flex-col fixed h-full z-10">
+        <div className="p-6 flex items-center gap-3">
+          <ZuZuLogo size={40} />
+          <div>
+            <h1 className="font-bold text-xl tracking-tight text-slate-800">ZuZu Buddy</h1>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-4 py-4 space-y-1">
+          <SidebarItem icon={LayoutDashboard} label="總覽儀表板" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+          <SidebarItem icon={MessageSquare} label="智慧收件匣" active={activeTab === 'inbox'} onClick={() => setActiveTab('inbox')} alertCount={messages.filter(m=>m.status==='pending_review').length} />
+          <SidebarItem icon={CalendarIcon} label="預約行事曆" active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} />
+          <SidebarItem icon={ClipboardList} label="訂單管理" active={activeTab === 'orders'} onClick={() => setActiveTab('orders')} />
+          <SidebarItem icon={DollarSign} label="金流與營收分析" active={activeTab === 'finance'} onClick={() => setActiveTab('finance')} />
+          <SidebarItem icon={Megaphone} label="行銷助手" active={activeTab === 'marketing'} onClick={() => setActiveTab('marketing')} />
+          <SidebarItem icon={BrainCircuit} label="智能商務分析" active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} />
+          <SidebarItem icon={Users} label="客戶名單" active={activeTab === 'crm'} onClick={() => setActiveTab('crm')} />
+          <div className="my-2 border-t border-slate-100"></div>
+          <SidebarItem icon={Plug} label="整合中心" active={activeTab === 'integrations'} onClick={() => setActiveTab('integrations')} />
+          <SidebarItem icon={Settings} label="AI 設定問卷" active={activeTab === 'owner_setup'} onClick={() => setActiveTab('owner_setup')} />
+        </nav>
+
+        <div className="p-4 border-t border-slate-100">
+          <div 
+            onClick={() => setShowSettingsModal(true)}
+            className="bg-slate-50 rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:bg-slate-100 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden">
+               <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Annie" alt="User" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-slate-700 truncate">YUJUN</p>
+              <p className="text-xs text-slate-400 truncate">Pro 方案</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile Bottom Nav */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-2 z-50 safe-area-bottom">
+        <button onClick={() => setActiveTab('dashboard')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'dashboard' ? 'text-orange-600' : 'text-slate-400'}`}>
+            <Home className="w-6 h-6" />
+            <span className="text-[10px] font-bold mt-1">首頁</span>
+        </button>
+        <button onClick={() => setActiveTab('inbox')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'inbox' ? 'text-orange-600' : 'text-slate-400'}`}>
+            <div className="relative">
+                <MessageSquare className="w-6 h-6" />
+                {messages.filter(m=>m.status==='pending_review').length > 0 && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></div>}
+            </div>
+            <span className="text-[10px] font-bold mt-1">收件匣</span>
+        </button>
+        <button onClick={() => setActiveTab('calendar')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'calendar' ? 'text-orange-600' : 'text-slate-400'}`}>
+            <CalendarIcon className="w-6 h-6" />
+            <span className="text-[10px] font-bold mt-1">行事曆</span>
+        </button>
+        <button onClick={() => setActiveTab('orders')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'orders' ? 'text-orange-600' : 'text-slate-400'}`}>
+            <ClipboardList className="w-6 h-6" />
+            <span className="text-[10px] font-bold mt-1">訂單</span>
+        </button>
+      </div>
+
+      {/* Main Content */}
+      <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-y-auto h-screen pb-24 md:pb-8">
+        
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between mb-6">
+           <div className="flex items-center gap-2">
+             <ZuZuLogo size={32} />
+             <div className="font-bold text-xl text-slate-800">ZuZu Buddy</div>
+           </div>
+           <Bell className="w-5 h-5 text-slate-600" />
+        </div>
+
+        {/* --- DASHBOARD TAB --- */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             
+             {/* Onboarding Widget */}
+             {showOnboarding && (
+                <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-orange-100 text-orange-600 rounded-full">
+                            <CheckSquare className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-800">歡迎使用 ZuZu Buddy！</h3>
+                            <p className="text-sm text-slate-500">完成新手任務，讓 AI 助手開始為您工作。</p>
+                        </div>
+                    </div>
+                    <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-4">
+                        <div className="w-full md:w-48 h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-orange-500 w-1/4"></div>
+                        </div>
+                        <span className="text-xs font-bold text-slate-400">進度 1/4</span>
+                        <button onClick={() => setShowOnboarding(false)} className="text-slate-400 hover:text-slate-600">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+             )}
+
+             {/* UPDATED: Smaller Morning Greeting Section */}
+             <div className="bg-orange-500 rounded-2xl p-5 text-white flex justify-between items-center shadow-lg shadow-orange-200 relative overflow-hidden">
+                <div className="relative z-10 flex items-center gap-4">
+                   <div className="p-3 bg-white/20 rounded-full">
+                      <Clock className="w-6 h-6 text-white" />
+                   </div>
+                   <div>
+                       <h2 className="text-xl font-bold mb-1">早安，YUJUN！☀️</h2>
+                       <p className="opacity-90 text-sm">ZuZu 今天攔截了 {messages.filter(m => m.status === 'replied').length} 筆預約，省下約 1.5 小時。</p>
+                   </div>
+                </div>
+                {/* Removed large Clock icon to save space */}
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard title="待回覆訊息" value={messages.filter(m=>m.status==='pending_review').length} icon={MessageSquare} color="bg-red-100 text-red-600" />
+                <StatCard title="本週預約" value={ALL_DATA.length} icon={CalendarIcon} color="bg-blue-100 text-blue-600" />
+                <StatCard title="本月營收預估" value="NT$ 125k" icon={TrendingUp} color="bg-green-100 text-green-600" />
+             </div>
+
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: Urgent Tasks */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-full">
+                    <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        最新待辦事項 (未回覆)
+                      </h3>
+                      <button onClick={() => setActiveTab('inbox')} className="text-sm text-orange-600 font-bold hover:underline">處理所有</button>
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                      {messages.filter(m => m.status === 'pending_review').length > 0 ? (
+                        messages.filter(m => m.status === 'pending_review').slice(0, 3).map(msg => (
+                          <div key={msg.id} onClick={() => {setActiveTab('inbox'); setSelectedMsgId(msg.id);}} className="p-4 hover:bg-slate-50 cursor-pointer flex items-center gap-4 transition-colors">
+                            <img src={msg.avatar} className="w-10 h-10 rounded-full" alt="" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="font-bold text-slate-800 text-sm">{msg.client}</span>
+                                <span className="text-xs text-slate-400">{msg.time}</span>
+                              </div>
+                              <p className="text-sm text-slate-500 truncate">{msg.lastMessage}</p>
+                            </div>
+                            <div className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">AI 擬稿完成</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-8 text-center text-slate-400">
+                          <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                          <p>太棒了！目前沒有待辦事項 🎉</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Today's Agenda (Synced with CURRENT_DATE) */}
+                <div className="space-y-6">
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 h-full">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <CalendarIcon className="w-4 h-4 text-slate-500" />
+                        今日行程 ({CURRENT_DATE.slice(5)})
+                      </h3>
+                    </div>
+                    <div className="space-y-4">
+                      {ALL_DATA.filter(a => a.date === CURRENT_DATE).map((apt, index) => (
+                        <div key={apt.id} className="relative pl-6 pb-2 last:pb-0">
+                          <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 ${apt.status === 'upcoming' ? 'border-orange-500 bg-white' : 'border-slate-300 bg-slate-100'}`}></div>
+                          <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                             <div className="flex justify-between items-center mb-1">
+                               <span className="font-bold text-slate-800 text-sm">{apt.time}</span>
+                               <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${apt.status === 'upcoming' ? 'bg-orange-100 text-orange-600' : 'bg-slate-200 text-slate-500'}`}>
+                                 {apt.status === 'upcoming' ? '即將開始' : '已確認'}
+                               </span>
+                             </div>
+                             <div className="text-sm font-medium text-slate-700">{apt.service}</div>
+                             <div className="text-xs text-slate-500 mt-1">{apt.client} ({apt.industry})</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+             </div>
+
+             {/* AI Data Visualization Section (UPDATED) */}
+             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                   <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                      <BarChart2 className="w-5 h-5 text-purple-500" />
+                      AI 效能洞察 (近 7 日)
+                   </h3>
+                   <div className="flex gap-4 text-sm">
+                      <div className="flex flex-col items-center px-3 py-1 bg-slate-50 rounded-lg">
+                         <span className="text-xs text-slate-400">總對話數</span>
+                         <span className="font-bold text-slate-800">342 則</span>
+                      </div>
+                      <div className="flex flex-col items-center px-3 py-1 bg-slate-50 rounded-lg">
+                         <span className="text-xs text-slate-400">AI 攔截率</span>
+                         <span className="font-bold text-green-600">82%</span>
+                      </div>
+                   </div>
+                </div>
+                {/* Adjusted Bar Chart - Better Visuals */}
+                <div className="flex items-end justify-between h-40 gap-4">
+                   {[65, 80, 45, 90, 75, 60, 85].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col justify-end group relative h-full">
+                         {/* Background Track */}
+                         <div className="absolute bottom-0 w-full h-full bg-slate-100 rounded-md"></div>
+                         
+                         {/* Foreground Bar */}
+                         <div 
+                           className="relative w-full bg-gradient-to-t from-orange-400 to-orange-300 rounded-md hover:from-orange-500 hover:to-orange-400 transition-all duration-500 shadow-sm" 
+                           style={{height: `${h}%`}}
+                         >
+                            {/* Floating Tooltip */}
+                            <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded pointer-events-none transition-opacity whitespace-nowrap z-10">
+                                {h}%
+                            </div>
+                         </div>
+                         
+                         <div className="text-xs text-center text-slate-400 mt-2 font-medium relative z-10">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}</div>
+                      </div>
+                   ))}
+                </div>
+             </div>
+          </div>
+        )}
+
+        {/* --- INTEGRATIONS HUB --- */}
+        {activeTab === 'integrations' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <h2 className="text-2xl font-bold text-slate-800">整合中心 (Integrations)</h2>
+                <p className="text-slate-500">連結您的外部帳號，讓 ZuZu 自動化處理您的業務。</p>
+                
+                {/* UPDATED: Added more integrations */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <IntegrationCard name="LINE 官方帳號" icon={MessageCircle} status="connected" color="text-green-500" desc="自動接收與回覆訊息" />
+                    <IntegrationCard name="Google Calendar" icon={CalendarIcon} status="connected" color="text-blue-500" desc="雙向同步行程" />
+                    <IntegrationCard name="Instagram / FB" icon={Instagram} status="disconnected" color="text-pink-500" desc="自動發布貼文" />
+                    <IntegrationCard name="Stripe 金流" icon={CreditCard} status="connected" color="text-purple-500" desc="接收付款與開立發票" />
+                    <IntegrationCard name="Notion" icon={FileText} status="disconnected" color="text-slate-500" desc="同步 CRM 客戶資料" />
+                    
+                    {/* New Additions */}
+                    <IntegrationCard name="Shopify / WooCommerce" icon={ShoppingCart} status="disconnected" color="text-green-600" desc="訂單同步與庫存管理" />
+                    <IntegrationCard name="Zapier" icon={Workflow} status="disconnected" color="text-orange-500" desc="串接 5000+ 種應用程式" />
+                    <IntegrationCard name="Mailchimp" icon={MailIcon} status="disconnected" color="text-yellow-500" desc="電子報行銷自動化" />
+                </div>
+            </div>
+        )}
+
+        {/* --- SMART ANALYSIS TAB (Refactored) --- */}
+        {activeTab === 'analysis' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="bg-gradient-to-r from-indigo-900 to-purple-900 rounded-2xl p-8 text-white shadow-lg">
+                   <div className="flex items-center gap-4">
+                       <div className="p-3 bg-white/10 rounded-xl">
+                           <BrainCircuit className="w-8 h-8 text-purple-300" />
+                       </div>
+                       <div>
+                           <h2 className="text-2xl font-bold">智能商務分析</h2>
+                           <p className="opacity-80">ZuZu 根據您的營運數據，為您分析潛在機會與風險。</p>
+                       </div>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Hot Topics */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                           <MessageCircle className="w-5 h-5 text-orange-500" />
+                           客戶熱門提問 TOP 3
+                        </h3>
+                        <div className="space-y-4">
+                            {[
+                                { q: "請問可以幫忙串接 Notion 嗎？", count: 12, trend: "up" },
+                                { q: "收費方式與方案差異？", count: 8, trend: "stable" },
+                                { q: "LINE 官方帳號需要升級嗎？", count: 5, trend: "down" }
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xs font-bold">{i+1}</div>
+                                        <span className="text-sm font-medium text-slate-700">{item.q}</span>
+                                    </div>
+                                    <div className="text-xs font-bold text-slate-500">{item.count} 次詢問</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* User Source Analysis */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                           <Target className="w-5 h-5 text-blue-500" />
+                           用戶來源分析
+                        </h3>
+                        <div className="flex items-center gap-8">
+                            <div className="relative w-32 h-32 rounded-full border-8 border-slate-100" 
+                                 style={{background: 'conic-gradient(#E1306C 0% 50%, #000000 50% 80%, #06C755 80% 100%)'}}>
+                            </div>
+                            <div className="space-y-3 text-sm">
+                                <div className="flex items-center justify-between w-40">
+                                    <span className="flex items-center gap-2"><div className="w-3 h-3 bg-[#E1306C] rounded-full"></div> Instagram</span>
+                                    <span className="font-bold text-slate-700">50%</span>
+                                </div>
+                                <div className="flex items-center justify-between w-40">
+                                    <span className="flex items-center gap-2"><div className="w-3 h-3 bg-black rounded-full"></div> Threads</span>
+                                    <span className="font-bold text-slate-700">30%</span>
+                                </div>
+                                <div className="flex items-center justify-between w-40">
+                                    <span className="flex items-center gap-2"><div className="w-3 h-3 bg-[#06C755] rounded-full"></div> LINE</span>
+                                    <span className="font-bold text-slate-700">20%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* UPDATED: New Analysis Section - Peak Hours */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                           <Clock className="w-5 h-5 text-purple-500" />
+                           熱門預約時段分析
+                        </h3>
+                        <div className="flex items-end gap-2 h-40 pt-4">
+                           {[10, 15, 40, 60, 85, 50, 30, 20].map((h, i) => (
+                             <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                                <div className="w-full bg-purple-100 rounded-t-lg relative hover:bg-purple-200 transition-all" style={{height: `${h}%`}}>
+                                    <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded pointer-events-none whitespace-nowrap">
+                                        {10+i}:00
+                                    </div>
+                                </div>
+                                <span className="text-[10px] text-slate-400 font-bold">{10+i}點</span>
+                             </div>
+                           ))}
+                        </div>
+                    </div>
+
+                    {/* UPDATED: New Analysis Section - Revenue Contribution */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                           <DollarSign className="w-5 h-5 text-green-500" />
+                           服務營收貢獻佔比
+                        </h3>
+                        <div className="space-y-4">
+                            {[
+                                { name: "系統架設諮詢", percent: 45, color: "bg-blue-500" },
+                                { name: "Pro 方案訂閱", percent: 35, color: "bg-purple-500" },
+                                { name: "美業自動化包", percent: 20, color: "bg-pink-500" },
+                            ].map((item, i) => (
+                                <div key={i}>
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span className="font-bold text-slate-700">{item.name}</span>
+                                        <span className="text-slate-500">{item.percent}%</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                                        <div className={`h-full ${item.color}`} style={{width: `${item.percent}%`}}></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* --- INBOX TAB --- */}
+        {activeTab === 'inbox' && (
+          <div className="h-[calc(100vh-8rem)] bg-white rounded-2xl border border-slate-200 flex overflow-hidden shadow-sm animate-in fade-in zoom-in-95 duration-300">
+            {/* Inbox List */}
+            <div className="w-1/3 border-r border-slate-100 flex flex-col">
+              <div className="p-4 border-b border-slate-100 bg-slate-50">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="搜尋訊息..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20" 
+                  />
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {filteredMessages.length > 0 ? filteredMessages.map((msg) => (
+                  <div 
+                    key={msg.id} 
+                    onClick={() => setSelectedMsgId(msg.id)}
+                    className={`p-4 hover:bg-orange-50 cursor-pointer transition-colors border-b border-slate-50 ${selectedMsgId === msg.id ? 'bg-orange-50 border-orange-100' : ''}`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                        {msg.client}
+                        {msg.status === 'pending_review' && <span className="w-2 h-2 bg-red-500 rounded-full"></span>}
+                      </div>
+                      <span className="text-xs text-slate-400">{msg.time}</span>
+                    </div>
+                    <p className="text-sm text-slate-500 truncate mb-2 font-medium">{msg.lastMessage}</p>
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-0.5 rounded text-[10px] text-slate-500">
+                          <PlatformIcon platform={msg.platform} />
+                          {msg.platform}
+                       </div>
+                       {msg.status === 'replied' && <CheckCircle className="w-3 h-3 text-green-500" />}
+                    </div>
+                  </div>
+                )) : (
+                    <div className="p-8 text-center text-slate-400 text-sm">無符合搜尋結果</div>
+                )}
+              </div>
+            </div>
+            
+            {/* Chat Detail */}
+            <div className="flex-1 flex flex-col bg-[#F8F9FA] relative">
+              {selectedMsg ? (
+                <>
+                  <div className="p-4 bg-white border-b border-slate-100 flex justify-between items-center shadow-sm z-10">
+                    <div className="flex items-center gap-3">
+                      <img src={selectedMsg.avatar} className="w-10 h-10 rounded-full" alt="" />
+                      <div>
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                          {selectedMsg.client}
+                          <PlatformIcon platform={selectedMsg.platform} />
+                        </h3>
+                        <div className="text-xs text-slate-500">來源：{selectedMsg.platform} 私訊</div>
+                      </div>
+                    </div>
+                    {/* View Client Detail Button */}
+                    <button 
+                        onClick={() => handleViewClientDetail(clients.find(c => c.name === selectedMsg.client))}
+                        className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-orange-500 transition-colors tooltip"
+                        title="查看客戶詳細資訊"
+                    >
+                        <Info className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 p-6 space-y-6 overflow-y-auto pb-24">
+                     {selectedMsg.history.map((h, i) => (
+                       <div key={i} className={`flex flex-col gap-1 ${h.sender === 'client' ? 'items-start' : 'items-end'}`}>
+                          <div className={`flex gap-3 ${h.sender === 'client' ? '' : 'flex-row-reverse'}`}>
+                            <div className={`p-3 rounded-2xl shadow-sm max-w-[80%] whitespace-pre-wrap relative group ${h.sender === 'client' ? 'bg-white' : h.type === 'system' ? 'bg-slate-200 text-slate-600' : 'bg-orange-500 text-white'}`}>
+                              {h.text}
+                            </div>
+                          </div>
+                          {/* Timestamp Always Visible */}
+                          {h.time && h.type !== 'system' && (
+                              <span className={`text-[10px] text-slate-400 ${h.sender === 'client' ? 'ml-1' : 'mr-1'} mb-2`}>
+                                  {h.time}
+                              </span>
+                          )}
+                          {h.type === 'system' && h.showCalendarBtn && (
+                             <button 
+                                onClick={handleAddToCalendar}
+                                className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full border border-blue-100 hover:bg-blue-100 font-bold flex items-center gap-1 mb-2 self-center"
+                             >
+                                <CalendarPlus className="w-3 h-3" /> 加入 Google 行事曆
+                             </button>
+                          )}
+                       </div>
+                     ))}
+                     
+                     {/* AI Suggestion Box */}
+                     {selectedMsg.status === 'pending_review' && (
+                       <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5 mx-8 shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                          <div className="flex items-center justify-between mb-3">
+                             <div className="flex items-center gap-2 text-orange-700 font-bold text-sm">
+                                <Sparkles className="w-4 h-4" /> ZuZu 建議回覆
+                             </div>
+                             {/* Product Recommendation Button */}
+                             <button 
+                                onClick={() => handleRecommendProduct(selectedMsg.id)}
+                                className="text-xs bg-white border border-orange-200 text-orange-600 px-2 py-1 rounded-lg hover:bg-orange-50 transition-colors flex items-center gap-1"
+                             >
+                                <Gift className="w-3 h-3" /> 推薦服務
+                             </button>
+                          </div>
+                          
+                          <textarea 
+                            ref={textareaRef}
+                            className="w-full bg-white border border-orange-200 rounded-xl p-3 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none" 
+                            rows="4" 
+                            value={getCurrentDraft(selectedMsg)} 
+                            onChange={(e) => handleDraftEdit(selectedMsg.id, e.target.value)}
+                            readOnly={isRegenerating}
+                          />
+                          
+                          <div className="flex gap-2 mb-4 bg-white p-1 pl-3 border border-orange-200 rounded-xl shadow-sm">
+                             <input 
+                               type="text" 
+                               value={aiInstruction}
+                               onChange={(e) => setAiInstruction(e.target.value)}
+                               placeholder="給 AI 建議... (例如：語氣再親切一點)" 
+                               className="flex-1 text-sm outline-none text-slate-700 bg-transparent py-2"
+                               disabled={isRegenerating}
+                               onKeyDown={(e) => e.key === 'Enter' && handleRefineDraft(selectedMsg.id)}
+                             />
+                             <button 
+                               onClick={() => handleRefineDraft(selectedMsg.id)}
+                               disabled={!aiInstruction.trim() || isRegenerating}
+                               className="bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 rounded-lg text-xs font-bold flex items-center gap-1"
+                             >
+                               {isRegenerating ? <Loader2 className="w-3 h-3 animate-spin"/> : <Sparkles className="w-3 h-3"/>}
+                               AI 修改
+                             </button>
+                          </div>
+
+                          <div className="flex gap-3 justify-end border-t border-orange-200/50 pt-3">
+                             <button onClick={handleManualEditClick} className="px-4 py-2 text-sm font-medium text-slate-500 hover:bg-white rounded-lg flex items-center gap-2"><Edit3 className="w-3 h-3"/> 手動編輯</button>
+                             <button onClick={() => handleSendMessage(selectedMsg.id)} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm shadow-orange-200"><Send className="w-4 h-4" /> 確認發送</button>
+                          </div>
+                       </div>
+                     )}
+                     <div ref={chatEndRef} />
+                  </div>
+                  
+                  {/* General Chat Input (UPDATED: Auto resize textarea) */}
+                  <div className="p-4 bg-white border-t border-slate-100 absolute bottom-0 w-full shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                     <div className="flex gap-2 items-end">
+                        <div className="flex-1 relative">
+                            <textarea 
+                                ref={inputRef}
+                                value={manualInput}
+                                onChange={handleInputResize}
+                                onKeyDown={(e) => {
+                                  if(e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleManualSend(selectedMsg.id);
+                                  }
+                                }}
+                                placeholder="自行輸入訊息或點選右側星星再次生成相關訊息..." 
+                                className="w-full bg-slate-50 border-transparent focus:bg-white border focus:border-orange-300 rounded-xl pl-4 pr-10 py-2.5 text-sm focus:outline-none transition-all resize-none overflow-y-auto"
+                                style={{ minHeight: '44px', maxHeight: '150px' }}
+                                rows="1"
+                            />
+                            <button 
+                                onClick={handleGenerateManualInput}
+                                className="absolute right-2 top-2 p-1 text-slate-400 hover:text-purple-600 transition-colors tooltip"
+                                title="AI 生成建議"
+                            >
+                                {isPolishing ? <Loader2 className="w-4 h-4 animate-spin"/> : <Sparkles className="w-4 h-4"/>}
+                            </button>
+                        </div>
+                        <button 
+                            onClick={() => handleManualSend(selectedMsg.id)}
+                            disabled={!manualInput.trim()}
+                            className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50 mb-1"
+                        >
+                           <Send className="w-5 h-5" />
+                        </button>
+                     </div>
+                  </div>
+                </>
+              ) : <div className="flex-1 flex items-center justify-center text-slate-400">請選擇訊息</div>}
+            </div>
+          </div>
+        )}
+
+        {/* --- MARKETING TAB (UPDATED RESTRUCTURE) --- */}
+        {activeTab === 'marketing' && (
+          <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
+             <div className="flex flex-col md:flex-row justify-between items-end gap-4 shrink-0">
+                <div>
+                   <h2 className="text-2xl font-bold text-slate-800">行銷助手</h2>
+                   <p className="text-slate-500">選擇功能，讓 AI 協助您的業務推廣。</p>
+                </div>
+                {/* Main Marketing Navigation */}
+                <div className="flex bg-white p-1 rounded-xl border border-slate-200">
+                    {[
+                        { id: 'messages', label: '訊息行銷', icon: Megaphone },
+                        { id: 'copywriting', label: '社群文案', icon: Edit3 },
+                        { id: 'ads', label: '廣告投放', icon: MousePointer2 },
+                        { id: 'influencers', label: '網紅媒合', icon: UserPlus },
+                    ].map(tab => (
+                        <button 
+                            key={tab.id}
+                            onClick={() => setMarketingSubTab(tab.id)}
+                            className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${marketingSubTab === tab.id ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+                        >
+                            <tab.icon className="w-4 h-4" /> {tab.label}
+                        </button>
+                    ))}
+                </div>
+             </div>
+
+             <div className="flex-1 overflow-y-auto pr-2 pb-24">
+                {/* --- 1. MESSAGES SUBTAB (Includes Churn & Broadcast) --- */}
+                {marketingSubTab === 'messages' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
+                        {/* Broadcast Section */}
+                        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 text-lg">
+                                <Megaphone className="w-5 h-5 text-orange-500" /> 一鍵分眾宣傳 (Broadcast)
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="md:col-span-1 space-y-4">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">選擇目標受眾 (Tags)</label>
+                                        <select 
+                                            value={broadcastTag} 
+                                            onChange={(e) => setBroadcastTag(e.target.value)}
+                                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:ring-2 focus:ring-orange-200 outline-none"
+                                        >
+                                            <option value="all">所有客戶 ({clients.length}人)</option>
+                                            {uniqueClientTags.map(tag => (
+                                                <option key={tag} value={tag}>{tag} ({clients.filter(c => c.tags.includes(tag)).length}人)</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="bg-orange-50 p-4 rounded-xl">
+                                        <h4 className="font-bold text-orange-700 text-sm mb-1">AI 建議</h4>
+                                        <p className="text-xs text-orange-600">針對「{broadcastTag === 'all' ? '所有客戶' : broadcastTag}」，建議您可以發送新品上市通知或限時優惠。</p>
+                                    </div>
+                                </div>
+                                <div className="md:col-span-2 flex flex-col">
+                                    <textarea 
+                                        value={broadcastMsg}
+                                        onChange={(e) => setBroadcastMsg(e.target.value)}
+                                        placeholder="輸入推播訊息內容..." 
+                                        className="flex-1 w-full p-4 bg-slate-50 border border-slate-200 rounded-xl mb-4 focus:ring-2 focus:ring-orange-200 outline-none resize-none"
+                                        rows="4"
+                                    />
+                                    <div className="flex justify-end">
+                                        <button 
+                                            onClick={handleBroadcast}
+                                            disabled={!broadcastMsg.trim() || isBroadcasting}
+                                            className="bg-orange-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-orange-200 hover:bg-orange-600 disabled:opacity-50 flex items-center gap-2"
+                                        >
+                                            {isBroadcasting ? <Loader2 className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4"/>}
+                                            發送給 {broadcastTag === 'all' ? clients.length : clients.filter(c => c.tags.includes(broadcastTag)).length} 位客戶
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Churn Wake Up Section (Moved from Analysis) */}
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 text-lg">
+                               <Users className="w-5 h-5 text-red-500" />
+                               沉睡客群喚醒 (超過 60 天未互動)
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {[
+                                    { name: "Amy", last: "65天前", value: "高潛力", industry: "美業", lastContact: "2025-09-10" },
+                                    { name: "Jason 攝影", last: "82天前", value: "中潛力", industry: "攝影", lastContact: "2025-08-24" },
+                                    { name: "Lisa", last: "90天前", value: "低潛力", industry: "其他", lastContact: "2025-08-16" }
+                                ].map((client, i) => (
+                                    <div key={i} className="p-4 border border-slate-100 rounded-xl hover:border-red-200 transition-colors group">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="font-bold text-slate-700">{client.name}</div>
+                                            <span className="text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded font-bold">{client.last}</span>
+                                        </div>
+                                        <div className="text-xs text-slate-400 mb-4">上次服務：系統架設諮詢</div>
+                                        <button 
+                                            onClick={() => handleGenerateReengagement(client)}
+                                            className="w-full py-2 bg-white border border-red-100 text-red-600 text-xs font-bold rounded-lg hover:bg-red-50 flex items-center justify-center gap-1 group-hover:shadow-sm"
+                                        >
+                                            <Sparkles className="w-3 h-3" /> 生成喚醒訊息
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- 2. COPYWRITING SUBTAB (Existing Logic) --- */}
+                {marketingSubTab === 'copywriting' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+                        <div className="flex overflow-x-auto gap-2 pb-2">
+                             {[
+                                { id: 'trends', label: '🔥 產業話題' },
+                                { id: 'success', label: '🏆 成功案例' },
+                                { id: 'features', label: '⚡ 功能宣傳' },
+                                { id: 'inspiration', label: '💡 靈感發想' }
+                            ].map(cat => (
+                                <button 
+                                    key={cat.id}
+                                    onClick={() => {setMarketingCategory(cat.id); setMarketingStep('crawler'); setInspirationInput("");}}
+                                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap border ${marketingCategory === cat.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                                >
+                                    {cat.label}
+                                </button>
+                            ))}
+                        </div>
+
+                         {/* Inspiration Mode */}
+                         {marketingCategory === 'inspiration' && marketingStep === 'crawler' && (
+                             <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm text-center space-y-6">
+                                 <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mx-auto text-yellow-500">
+                                     <Lightbulb className="w-8 h-8" />
+                                 </div>
+                                 <div>
+                                     <h3 className="text-xl font-bold text-slate-800">有什麼新點子嗎？</h3>
+                                     <p className="text-slate-500 mt-2">隨手寫下您的小故事或想法，AI 幫您變成吸睛貼文。</p>
+                                 </div>
+                                 <textarea 
+                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 transition-all min-h-[150px]"
+                                    placeholder="例如：今天遇到一個很可愛的客人，她說..."
+                                    value={inspirationInput}
+                                    onChange={(e) => setInspirationInput(e.target.value)}
+                                 />
+                                 <button 
+                                    onClick={() => handleGeneratePost(null, 'inspiration')}
+                                    disabled={!inspirationInput.trim()}
+                                    className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                 >
+                                    ✨ 開始生成貼文
+                                 </button>
+                             </div>
+                         )}
+
+                         {/* Content Grid */}
+                         {marketingCategory !== 'inspiration' && marketingStep === 'crawler' && (
+                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                             {/* Trends */}
+                             {marketingCategory === 'trends' && filteredArticles.map(item => (
+                               <div key={item.id} onClick={() => setShowArticleModal(item)} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col h-full group cursor-pointer">
+                                  <div className="flex items-center gap-2 mb-3">
+                                     <Globe className="w-4 h-4 text-blue-500" />
+                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{item.source}</span>
+                                  </div>
+                                  <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-orange-600 transition-colors">{item.title}</h3>
+                                  <p className="text-sm text-slate-500 mb-4 flex-1 line-clamp-3">{item.summary}</p>
+                                  <button onClick={(e) => { e.stopPropagation(); handleGeneratePost(item, 'trends'); }} className="w-full bg-white border border-slate-200 text-slate-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all">
+                                    <Sparkles className="w-4 h-4" /> 生成貼文
+                                  </button>
+                               </div>
+                             ))}
+                             {/* Success Stories Logic */}
+                             {marketingCategory === 'success' && clients.filter(c => c.status === '已簽約').map(client => (
+                               <div key={client.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col h-full group">
+                                  <div className="flex items-center gap-2 mb-3">
+                                     <Award className="w-4 h-4 text-yellow-500" />
+                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">成交客戶</span>
+                                  </div>
+                                  <h3 className="text-lg font-bold text-slate-800 mb-2">{client.company}</h3>
+                                  <p className="text-sm text-slate-500 mb-4 flex-1">
+                                      <span className="font-bold">痛點：</span>{client.notes}<br/>
+                                      <span className="font-bold">方案：</span>{client.plan} 方案
+                                  </p>
+                                  <button onClick={() => handleGeneratePost(client, 'success')} className="w-full bg-white border border-slate-200 text-slate-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-200 transition-all">
+                                    <Sparkles className="w-4 h-4" /> 撰寫案例
+                                  </button>
+                               </div>
+                             ))}
+                             {/* Features Promo Logic */}
+                             {marketingCategory === 'features' && [
+                                 { id: 1, title: '24H 自動預約', desc: '半夜也能自動接單，不錯過任何生意。', painPoint: '常常在忙碌時無法回覆訊息？' },
+                                 { id: 2, title: 'LINE 智慧客服', desc: '串接官方帳號，自動回覆常見問題。', painPoint: '重複的問題回答了一百遍覺得心累？' }
+                             ].map(feat => (
+                               <div key={feat.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col h-full group">
+                                  <div className="flex items-center gap-2 mb-3">
+                                     <Zap className="w-4 h-4 text-purple-500" />
+                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">核心功能</span>
+                                  </div>
+                                  <h3 className="text-lg font-bold text-slate-800 mb-2">{feat.title}</h3>
+                                  <p className="text-sm text-slate-500 mb-4 flex-1">{feat.desc}</p>
+                                  <button onClick={() => handleGeneratePost(feat, 'features')} className="w-full bg-white border border-slate-200 text-slate-700 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-all">
+                                    <Sparkles className="w-4 h-4" /> 推廣此功能
+                                  </button>
+                               </div>
+                             ))}
+                           </div>
+                         )}
+
+                         {/* Editor / Loading States */}
+                         {marketingStep === 'loading' && (
+                           <div className="h-64 flex flex-col items-center justify-center text-center">
+                             <Loader2 className="w-16 h-16 text-orange-500 animate-spin mb-4" />
+                             <h3 className="font-bold text-slate-800 text-lg">AI 正在撰寫貼文...</h3>
+                             <p className="text-slate-500">分析相關數據與語氣中</p>
+                           </div>
+                         )}
+
+                         {marketingStep === 'editor' && (
+                           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col md:flex-row">
+                              <div className="flex-1 p-8 border-r border-slate-100">
+                                 <div className="flex justify-between items-center mb-6">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                       <Edit3 className="w-5 h-5 text-orange-500" /> 貼文編輯器
+                                    </h3>
+                                 </div>
+                                 <textarea 
+                                   className="w-full h-64 p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none leading-relaxed"
+                                   value={generatedPost}
+                                   onChange={(e) => setGeneratedPost(e.target.value)}
+                                 />
+                                 <div className="flex justify-between mt-4">
+                                    <button onClick={() => setMarketingStep('crawler')} className="text-slate-500 font-medium hover:text-slate-800">取消</button>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => {setIsPolishing(true); setTimeout(() => {setGeneratedPost(p => p + "\n\n(AI 潤飾：語氣更活潑了！)"); setIsPolishing(false);}, 800);}} className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-bold flex items-center gap-2">
+                                            {isPolishing ? <Loader2 className="w-3 h-3 animate-spin"/> : <Sparkles className="w-3 h-3"/>} AI 潤飾
+                                        </button>
+                                        <button onClick={handlePublishPost} className="px-6 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 shadow-lg shadow-orange-200">立即發佈</button>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                         )}
+                    </div>
+                )}
+
+                {/* --- 3. ADS SUBTAB (Placeholder) --- */}
+                {marketingSubTab === 'ads' && (
+                    <div className="flex flex-col items-center justify-center h-64 text-center animate-in fade-in slide-in-from-bottom-2">
+                        <div className="p-4 bg-slate-100 rounded-full mb-4">
+                            <MousePointer2 className="w-8 h-8 text-slate-400" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800">廣告投放功能即將上線</h3>
+                        <p className="text-slate-500 max-w-sm mt-2">未來您將能直接在此設定 Meta 與 Google 廣告，並由 AI 自動優化預算。</p>
+                    </div>
+                )}
+
+                {/* --- 4. INFLUENCERS SUBTAB (Placeholder) --- */}
+                {marketingSubTab === 'influencers' && (
+                    <div className="flex flex-col items-center justify-center h-64 text-center animate-in fade-in slide-in-from-bottom-2">
+                        <div className="p-4 bg-slate-100 rounded-full mb-4">
+                            <UserPlus className="w-8 h-8 text-slate-400" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800">網紅媒合功能即將上線</h3>
+                        <p className="text-slate-500 max-w-sm mt-2">AI 將根據您的品牌風格，自動推薦適合的微網紅進行互惠或付費合作。</p>
+                    </div>
+                )}
+             </div>
+          </div>
+        )}
+
+        {/* --- CALENDAR TAB --- */}
+        {activeTab === 'calendar' && (
+          <div className="space-y-4 animate-in fade-in duration-500 h-full flex flex-col">
+             <div className="flex flex-col md:flex-row justify-between items-center mb-2 gap-4">
+                 <h2 className="text-2xl font-bold text-slate-800">預約行事曆 (示範)</h2>
+                 <div className="flex bg-white p-1 rounded-lg border border-slate-200">
+                    <button onClick={() => setCalendarView('week')} className={`px-3 py-1 rounded text-sm font-bold ${calendarView === 'week' ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>週視圖</button>
+                    <button onClick={() => setCalendarView('month')} className={`px-3 py-1 rounded text-sm font-bold ${calendarView === 'month' ? 'bg-slate-100 text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>月視圖</button>
+                 </div>
+             </div>
+             
+             {/* WEEK VIEW */}
+             {calendarView === 'week' && (
+                <div className="bg-white border border-slate-200 rounded-2xl flex-1 flex flex-col overflow-hidden shadow-sm">
+                    {/* Header Days */}
+                    <div className="flex border-b border-slate-200">
+                        <div className="w-16 p-3 bg-slate-50 border-r border-slate-200"></div>
+                        {['週一', '週二', '週三', '週四', '週五', '週六', '週日'].map((d, i) => (
+                            <div key={d} className="flex-1 p-3 text-center border-r border-slate-100 last:border-0 bg-slate-50">
+                                <div className={`text-xs font-bold ${d === '週五' ? 'text-orange-600' : 'text-slate-500'}`}>{d}</div>
+                                <div className={`text-sm font-bold ${d === '週五' ? 'text-orange-600' : 'text-slate-800'}`}>{10 + i}</div>
+                            </div>
+                        ))}
+                    </div>
+                    {/* Grid */}
+                    <div className="flex-1 overflow-y-auto relative bg-white">
+                        {/* Time Slots */}
+                        {[9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map(hour => (
+                            <div key={hour} className="flex h-20 border-b border-slate-100">
+                                <div className="w-16 p-2 text-xs text-slate-400 text-right border-r border-slate-200 pr-3">{hour}:00</div>
+                                {/* Columns */}
+                                {[0,1,2,3,4,5,6].map(col => (
+                                    <div key={col} className={`flex-1 border-r border-slate-50 relative ${col === 4 ? 'bg-orange-50/20' : ''}`}></div>
+                                ))}
+                            </div>
+                        ))}
+
+                        {/* Events based on ALL_DATA for the week 11/10 - 11/16 */}
+                        {ALL_DATA.filter(a => a.date === CURRENT_DATE).map(apt => {
+                            const startHour = parseInt(apt.time.split(':')[0]);
+                            const top = (startHour - 9) * 80; 
+                            const left = `calc(4rem + ((100% - 4rem) / 7) * 4)`; // Friday column
+                            return (
+                                <div key={apt.id} className="absolute w-[calc((100%-4rem)/7-4px)] h-20 m-0.5 bg-orange-100 border-l-4 border-orange-500 rounded p-2 text-xs shadow-sm cursor-pointer hover:shadow-md" style={{top: `${top}px`, left: left}}>
+                                    <div className="font-bold text-orange-700">{apt.time} {apt.service}</div>
+                                    <div className="text-orange-600">{apt.client}</div>
+                                </div>
+                            );
+                        })}
+                        
+                        {/* Other days dummy data visual */}
+                        <div className="absolute top-[80px] left-[calc(4rem+((100%-4rem)/7)*1)] w-[calc((100%-4rem)/7-4px)] h-20 m-0.5 bg-blue-100 border-l-4 border-blue-500 rounded p-2 text-xs shadow-sm cursor-pointer hover:shadow-md">
+                            <div className="font-bold text-blue-700">10:00 諮詢</div>
+                            <div className="text-blue-600">Kevin 林</div>
+                        </div>
+                    </div>
+                </div>
+             )}
+             
+             {/* MONTH VIEW */}
+             {calendarView === 'month' && (
+                 <div className="bg-white border border-slate-200 rounded-2xl flex-1 flex flex-col p-4 shadow-sm h-full overflow-hidden">
+                     <div className="grid grid-cols-7 mb-2">
+                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
+                            <div key={d} className="text-center text-xs font-bold text-slate-400 uppercase py-2">{d}</div>
+                        ))}
+                     </div>
+                     <div className="grid grid-cols-7 grid-rows-5 gap-2 flex-1">
+                        {Array.from({length: 35}, (_, i) => {
+                            const day = i - 2; 
+                            const isCurrentMonth = day > 0 && day <= 30;
+                            const isToday = day === 14;
+                            const hasEvent = [5, 8, 14, 15, 16, 18, 20].includes(day); 
+                            
+                            return (
+                                <div key={i} className={`border rounded-lg p-2 flex flex-col justify-between ${isToday ? 'border-orange-500 bg-orange-50' : 'border-slate-100'} ${!isCurrentMonth ? 'bg-slate-50/50' : 'bg-white'}`}>
+                                    <span className={`text-sm font-bold ${isToday ? 'text-orange-600' : isCurrentMonth ? 'text-slate-700' : 'text-slate-300'}`}>
+                                        {isCurrentMonth ? day : ''}
+                                    </span>
+                                    {isCurrentMonth && hasEvent && (
+                                        <div className="flex flex-col gap-1 mt-1">
+                                            <div className="h-1.5 w-full bg-blue-200 rounded-full"></div>
+                                            {day === 14 && <div className="h-1.5 w-3/4 bg-orange-300 rounded-full"></div>}
+                                            {day === 14 && <div className="h-1.5 w-1/2 bg-green-200 rounded-full"></div>}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                     </div>
+                 </div>
+             )}
+          </div>
+        )}
+
+        {/* --- ORDERS TAB --- */}
+        {activeTab === 'orders' && (
+            <div className="space-y-4 animate-in fade-in duration-500 h-full flex flex-col">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-2 gap-4">
+                    <h2 className="text-2xl font-bold text-slate-800">訂單管理</h2>
+                    <div className="flex gap-2">
+                        <select 
+                            value={orderFilterIndustry} 
+                            onChange={(e) => setOrderFilterIndustry(e.target.value)}
+                            className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-300"
+                        >
+                            <option value="all">所有產業</option>
+                            {uniqueIndustries.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                        </select>
+                        <select 
+                            value={orderFilterDate} 
+                            onChange={(e) => setOrderFilterDate(e.target.value)}
+                            className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-300"
+                        >
+                            <option value="all">所有日期</option>
+                            {uniqueDates.map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                        <select 
+                            value={orderFilterStatus} 
+                            onChange={(e) => setOrderFilterStatus(e.target.value)}
+                            className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-300"
+                        >
+                            <option value="all">所有付款狀態</option>
+                            <option value="paid">已付款</option>
+                            <option value="unpaid">未付款</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-2xl flex-1 overflow-hidden shadow-sm">
+                   <table className="w-full text-left">
+                       <thead className="bg-slate-50 border-b border-slate-100 text-xs uppercase text-slate-500">
+                           <tr>
+                               <th className="p-4">日期</th>
+                               <th className="p-4">時間</th>
+                               <th className="p-4">客戶</th>
+                               <th className="p-4">產業/方案</th>
+                               <th className="p-4">服務項目</th>
+                               <th className="p-4">金額</th>
+                               <th className="p-4">付款狀態</th>
+                           </tr>
+                       </thead>
+                       <tbody className="divide-y divide-slate-50">
+                           {filteredOrders.length > 0 ? filteredOrders.map(apt => (
+                               <tr key={apt.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => showNotification(`查看訂單 #${apt.id} 詳情...`)}>
+                                   <td className="p-4 text-sm font-bold text-slate-700">{apt.date}</td>
+                                   <td className="p-4 text-sm text-slate-600">{apt.time}</td>
+                                   <td className="p-4 text-sm font-medium">{apt.client}</td>
+                                   <td className="p-4 text-sm text-slate-500">
+                                       <span className="bg-slate-100 px-2 py-0.5 rounded text-[10px] mr-1">{apt.industry}</span>
+                                       <span className={`px-2 py-0.5 rounded text-[10px] ${apt.plan === 'Pro' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{apt.plan || 'N/A'}</span>
+                                   </td>
+                                   <td className="p-4 text-sm text-slate-500">{apt.service}</td>
+                                   <td className="p-4 text-sm font-bold">NT$ {apt.amount.toLocaleString()}</td>
+                                   <td className="p-4">
+                                       <span className={`text-xs px-2 py-1 rounded-full font-bold ${apt.payment === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                           {apt.payment === 'paid' ? '已付款' : '未付款'}
+                                       </span>
+                                   </td>
+                               </tr>
+                           )) : (
+                               <tr><td colSpan="7" className="p-8 text-center text-slate-400">沒有符合篩選條件的訂單</td></tr>
+                           )}
+                       </tbody>
+                   </table>
+                </div>
+            </div>
+        )}
+
+        {/* --- FINANCE TAB --- */}
+        {activeTab === 'finance' && (
+            <div className="space-y-8 animate-in fade-in duration-500">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-bold text-slate-800">金流與營收分析</h2>
+                </div>
+                
+                {/* Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <StatCard title="總營收 (本月)" value="NT$ 125,000" icon={DollarSign} color="bg-yellow-100 text-yellow-600" />
+                    <StatCard title="平均客單價 (AOV)" value="NT$ 2,500" icon={TrendingUp} color="bg-green-100 text-green-600" />
+                    <StatCard title="成功訂單數" value="50" icon={CheckCircle} color="bg-blue-100 text-blue-600" />
+                </div>
+
+                {/* Charts */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Revenue Bar Chart + Line Chart (Hybrid) */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                <BarChart2 className="w-5 h-5 text-purple-500" />
+                                每日營收趨勢 (近7日)
+                            </h3>
+                            <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-1 rounded">
+                                +12% 成長
+                            </span>
+                        </div>
+                        <div className="h-48 relative">
+                             {/* Simulated Line Chart using SVG */}
+                             <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" stopColor="rgba(249, 115, 22, 0.5)" />
+                                        <stop offset="100%" stopColor="rgba(249, 115, 22, 0)" />
+                                    </linearGradient>
+                                </defs>
+                                <path 
+                                    d="M5,60 L19,50 L33,73 L47,26 L61,40 L75,16 L90,36" 
+                                    fill="none" 
+                                    stroke="#f97316" 
+                                    strokeWidth="2" 
+                                    strokeLinecap="round"
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                                <path 
+                                    d="M5,60 L19,50 L33,73 L47,26 L61,40 L75,16 L90,36 L90,100 L5,100 Z" 
+                                    fill="url(#lineGradient)" 
+                                    stroke="none"
+                                    opacity="0.3"
+                                />
+                                {/* Dots */}
+                                {[60, 50, 73, 26, 40, 16, 36].map((y, i) => (
+                                    <circle key={i} cx={5 + i*14.16} cy={y} r="1" fill="#f97316" stroke="white" strokeWidth="0.5" />
+                                ))}
+                             </svg>
+
+                            <div className="flex items-end justify-between h-full gap-3 pb-6">
+                                {[12000, 15000, 8000, 22000, 18000, 25000, 19000].map((val, i) => (
+                                    <div key={i} className="flex-1 flex flex-col justify-end group items-center relative z-0">
+                                        {/* Value Label - Always Visible */}
+                                        <div className="text-[10px] text-slate-500 font-bold mb-1">
+                                            ${val/1000}k
+                                        </div>
+                                        <div className="w-full bg-purple-100 rounded-t-md relative hover:bg-purple-200 transition-colors" style={{height: `${val/300}%`}}>
+                                        </div>
+                                        <span className="text-[10px] text-center text-slate-400 absolute -bottom-5 w-full">{['11/08', '11/09', '11/10', '11/11', '11/12', '11/13', '11/14'][i]}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Industry Pie Chart */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                <PieChart className="w-5 h-5 text-orange-500" />
+                                客群產業分佈
+                            </h3>
+                        </div>
+                        <div className="flex items-center gap-8">
+                            <div className="relative w-32 h-32 rounded-full border-8 border-slate-100" 
+                                 style={{background: 'conic-gradient(#f97316 0% 40%, #fbbf24 40% 70%, #3b82f6 70% 90%, #cbd5e1 90% 100%)'}}>
+                            </div>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-orange-500 rounded-full"></div> 設計業 (40%)</div>
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-amber-400 rounded-full"></div> 運動/健康 (30%)</div>
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-blue-500 rounded-full"></div> 美業 (20%)</div>
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-300 rounded-full"></div> 其他 (10%)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Detailed Finance List */}
+                <div className="bg-white border border-slate-200 rounded-2xl flex-1 overflow-hidden shadow-sm">
+                   <div className="p-4 border-b border-slate-100 font-bold text-slate-700 bg-slate-50 flex justify-between items-center">
+                        <span>最新帳務明細</span>
+                        {/* Filters Moved Here */}
+                        <div className="flex gap-2">
+                            <select 
+                                value={financeFilterStatus} 
+                                onChange={(e) => setFinanceFilterStatus(e.target.value)}
+                                className="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg px-2 py-1 outline-none"
+                            >
+                                <option value="all">所有狀態</option>
+                                <option value="paid">已入帳</option>
+                                <option value="unpaid">處理中</option>
+                            </select>
+                            <select 
+                                value={financeFilterDate} 
+                                onChange={(e) => setFinanceFilterDate(e.target.value)}
+                                className="bg-white border border-slate-200 text-slate-700 text-xs rounded-lg px-2 py-1 outline-none"
+                            >
+                                <option value="all">所有時間</option>
+                                <option value="current">本月</option>
+                                <option value="last">上個月</option>
+                            </select>
+                        </div>
+                   </div>
+                   <table className="w-full text-left">
+                       <thead className="bg-white border-b border-slate-100 text-xs uppercase text-slate-500">
+                           <tr>
+                               <th className="p-4">訂單編號</th>
+                               <th className="p-4">日期</th>
+                               <th className="p-4">客戶</th>
+                               <th className="p-4">支付方式</th>
+                               <th className="p-4">金額</th>
+                               <th className="p-4">狀態</th>
+                           </tr>
+                       </thead>
+                       <tbody className="divide-y divide-slate-50">
+                           {filteredFinanceData.length > 0 ? filteredFinanceData.map(apt => (
+                               <tr key={apt.id} className="hover:bg-slate-50">
+                                   <td className="p-4 text-xs font-mono text-slate-500">#ORD-2025-{1000+apt.id}</td>
+                                   <td className="p-4 text-sm text-slate-700">{apt.date}</td>
+                                   <td className="p-4 text-sm font-medium">{apt.client}</td>
+                                   <td className="p-4 text-sm text-slate-600 flex items-center gap-2">
+                                       <CreditCard className="w-3 h-3"/> {apt.method || '未指定'}
+                                   </td>
+                                   <td className="p-4 text-sm font-bold">NT$ {apt.amount.toLocaleString()}</td>
+                                   <td className="p-4">
+                                       <span className={`text-xs px-2 py-1 rounded-full font-bold ${apt.payment === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                           {apt.payment === 'paid' ? '已入帳' : '未付款'}
+                                       </span>
+                                   </td>
+                               </tr>
+                           )) : (
+                               <tr><td colSpan="6" className="p-8 text-center text-slate-400">沒有符合條件的帳務資料</td></tr>
+                           )}
+                       </tbody>
+                   </table>
+                </div>
+            </div>
+        )}
+
+        {/* --- OWNER SETUP SURVEY --- */}
+        {activeTab === 'owner_setup' && (
+          <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500 py-6">
+             <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-gradient-to-tr from-orange-400 to-amber-300 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-orange-200">
+                    <Bot className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-800">AI 助手初始設定</h2>
+                <p className="text-slate-500 mt-2">您可以直接上傳圖片或對話紀錄，讓我自動學習您的經營風格。</p>
+             </div>
+
+             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="p-6 space-y-8">
+                   {/* 1. Service Intro */}
+                   <div>
+                      <div className="flex justify-between items-center mb-2">
+                          <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                             <Info className="w-4 h-4 text-orange-500" /> 服務詳細介紹
+                          </label>
+                      </div>
+                      <textarea 
+                         className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none text-sm min-h-[100px] ${ownerConfig.service_intro ? 'text-slate-800' : 'text-slate-400'}`}
+                         value={ownerConfig.service_intro}
+                         onChange={e => setOwnerConfig({...ownerConfig, service_intro: e.target.value})}
+                         placeholder="關於我們工作室的特色..."
+                      />
+                   </div>
+
+                   {/* 2. Services & Prices */}
+                   <div>
+                      <div className="flex justify-between items-center mb-2">
+                          <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                             <FileText className="w-4 h-4 text-orange-500" /> 服務項目與價格表
+                          </label>
+                          <label className="cursor-pointer bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors">
+                              {isAnalyzingImage ? <Loader2 className="w-3 h-3 animate-spin"/> : <ImageIcon className="w-3 h-3"/>}
+                              {isAnalyzingImage ? imageAnalysisStep : "上傳價目表圖片 (AI 辨識)"}
+                              <input type="file" className="hidden" onChange={handleImageUpload} accept="image/*" disabled={isAnalyzingImage} />
+                          </label>
+                      </div>
+                      <textarea 
+                         className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none text-sm min-h-[100px] transition-all ${ownerConfig.services ? 'text-slate-800' : 'text-slate-400'}`}
+                         value={ownerConfig.services}
+                         onChange={e => setOwnerConfig({...ownerConfig, services: e.target.value})}
+                         placeholder="手動輸入或點擊上方按鈕上傳圖片..."
+                      />
+                   </div>
+
+                   {/* 3. Rules */}
+                   <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                         <Clock className="w-4 h-4 text-orange-500" /> 預約與取消規則
+                      </label>
+                      <textarea 
+                         className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none text-sm min-h-[100px] ${ownerConfig.rules ? 'text-slate-800' : 'text-slate-400'}`}
+                         value={ownerConfig.rules}
+                         onChange={e => setOwnerConfig({...ownerConfig, rules: e.target.value})}
+                         placeholder="例如：需提前 24 小時預約..."
+                      />
+                   </div>
+
+                   {/* 4. QA & Notes */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                       <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                             <MessageCircle className="w-4 h-4 text-orange-500" /> 常見問答補充 (Q&A)
+                          </label>
+                          <textarea 
+                             className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none text-sm min-h-[100px] ${ownerConfig.qa_supplement ? 'text-slate-800' : 'text-slate-400'}`}
+                             value={ownerConfig.qa_supplement}
+                             onChange={e => setOwnerConfig({...ownerConfig, qa_supplement: e.target.value})}
+                             placeholder="Q: 可以帶寵物嗎? A: 可以..."
+                          />
+                       </div>
+                       <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                             <Edit3 className="w-4 h-4 text-orange-500" /> 備註 (給 AI 的叮嚀)
+                          </label>
+                          <textarea 
+                             className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none text-sm min-h-[100px] ${ownerConfig.notes ? 'text-slate-800' : 'text-slate-400'}`}
+                             value={ownerConfig.notes}
+                             onChange={e => setOwnerConfig({...ownerConfig, notes: e.target.value})}
+                             placeholder="例如：遇到殺價的客人請委婉拒絕..." 
+                          />
+                       </div>
+                   </div>
+
+                   {/* 5. Tone */}
+                   <div>
+                      <div className="flex justify-between items-center mb-2">
+                          <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                             <Sparkles className="w-4 h-4 text-orange-500" /> AI 回覆語氣偏好
+                          </label>
+                          <label className="cursor-pointer bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors">
+                              {isAnalyzingChat ? <Loader2 className="w-3 h-3 animate-spin"/> : <UploadCloud className="w-3 h-3"/>}
+                              {isAnalyzingChat ? "學習中..." : "上傳對話紀錄 (AI 學習語氣)"}
+                              <input type="file" className="hidden" onChange={handleChatUpload} accept=".txt,.csv,.json" />
+                          </label>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 mb-3">
+                         {['專業嚴謹', '親切熱情', '幽默風趣'].map(t => (
+                            <button 
+                               key={t}
+                               onClick={() => setOwnerConfig({...ownerConfig, tone: t})}
+                               className={`py-2 rounded-lg text-sm font-bold border transition-all ${ownerConfig.tone.includes(t) ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                            >
+                               {t}
+                            </button>
+                         ))}
+                      </div>
+                      <input 
+                         type="text" 
+                         className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none text-sm ${ownerConfig.tone ? 'text-slate-800' : 'text-slate-400'}`}
+                         value={ownerConfig.tone}
+                         onChange={e => setOwnerConfig({...ownerConfig, tone: e.target.value})}
+                         placeholder="或自訂語氣..." 
+                      />
+                   </div>
+
+                   {/* 6. Links */}
+                   <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                         <LinkIcon className="w-4 h-4 text-orange-500" /> 社群/官網連結 (AI 將自動爬取風格與案例)
+                      </label>
+                      <input 
+                         type="text" 
+                         className={`w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-200 outline-none text-sm ${ownerConfig.links ? 'text-slate-800' : 'text-slate-400'}`}
+                         value={ownerConfig.links}
+                         onChange={e => setOwnerConfig({...ownerConfig, links: e.target.value})}
+                         placeholder="例如：https://instagram.com/my_studio..." 
+                      />
+                   </div>
+                </div>
+
+                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+                   <button 
+                     onClick={handleSaveConfig}
+                     className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-orange-500 hover:shadow-orange-200 transition-all flex items-center gap-2"
+                   >
+                     <Save className="w-4 h-4" /> 儲存設定並訓練 AI
+                   </button>
+                </div>
+             </div>
+
+             {ownerConfig.isSubmitted && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2">
+                   <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                   <div>
+                      <h4 className="font-bold text-green-800">AI 訓練完成！</h4>
+                      <p className="text-sm text-green-700">ZuZu 現在已經記住了您的最新規則。您可以回到「智慧收件匣」測試新的回應效果。</p>
+                   </div>
+                </div>
+             )}
+          </div>
+        )}
+
+        {/* --- CRM TAB --- */}
+        {activeTab === 'crm' && (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
+             <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center bg-slate-50/50 gap-4">
+                 <div>
+                    <h2 className="text-xl font-bold text-slate-800">客戶名單</h2>
+                    <p className="text-slate-500 text-sm mt-1">共有 {clients.length} 位活躍客戶</p>
+                 </div>
+                 <div className="flex gap-2 flex-wrap">
+                    {/* CRM Filters */}
+                    <select 
+                        value={crmStatusFilter} 
+                        onChange={(e) => setCrmStatusFilter(e.target.value)}
+                        className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-300"
+                    >
+                        <option value="all">所有狀態</option>
+                        <option value="已簽約">已簽約</option>
+                        <option value="洽談中">洽談中</option>
+                        <option value="潛在">潛在客戶</option>
+                    </select>
+                    <select 
+                        value={crmSort} 
+                        onChange={(e) => setCrmSort(e.target.value)}
+                        className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-300"
+                    >
+                        <option value="recent">最近互動</option>
+                        <option value="oldest">最久未互動</option>
+                    </select>
+                    <select 
+                        value={crmTagFilter} 
+                        onChange={(e) => setCrmTagFilter(e.target.value)}
+                        className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg px-3 py-2 outline-none focus:border-orange-300"
+                    >
+                        <option value="all">所有標籤</option>
+                        {uniqueClientTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
+                    </select>
+                    <button className="flex items-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-lg text-sm font-bold hover:bg-slate-800">
+                       <Users className="w-4 h-4" /> 新增客戶
+                    </button>
+                 </div>
+             </div>
+             <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-100">
+                   <tr>
+                      <th className="p-4 pl-6 font-semibold">客戶資料</th>
+                      <th className="p-4 font-semibold">標籤</th>
+                      <th className="p-4 font-semibold">狀態</th>
+                      <th className="p-4 font-semibold">上次互動</th>
+                      <th className="p-4 font-semibold">累計消費</th>
+                      <th className="p-4 font-semibold text-right pr-6">操作</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                   {filteredClients.map(c => (
+                      <tr key={c.id} className="group hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => handleViewClientDetail(c)}>
+                         <td className="p-4 pl-6">
+                            <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600 border border-slate-200">
+                                  {c.name[0]}
+                               </div>
+                               <div>
+                                  <div className="font-bold text-slate-800">{c.name}</div>
+                                  <div className="text-xs text-slate-400 flex items-center gap-1">
+                                     {c.source.includes('LINE') ? <div className="w-2 h-2 rounded-full bg-green-500"></div> : <div className="w-2 h-2 rounded-full bg-slate-300"></div>}
+                                     {c.source}
+                                  </div>
+                               </div>
+                            </div>
+                         </td>
+                         <td className="p-4">
+                            <div className="flex flex-wrap gap-1">
+                               {c.tags.map(tag => (
+                                  <span key={tag} className="bg-white border border-slate-200 px-2 py-0.5 rounded text-[10px] text-slate-500">{tag}</span>
+                               ))}
+                            </div>
+                         </td>
+                         <td className="p-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${c.status === '已簽約' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                               {c.status}
+                            </span>
+                         </td>
+                         <td className="p-4 text-sm text-slate-500">{c.lastContact}</td>
+                         <td className="p-4 text-sm font-bold text-slate-700">NT$ {c.totalSpent.toLocaleString()}</td>
+                         <td className="p-4 pr-6 text-right">
+                            <div className="flex justify-end gap-2">
+                               <button 
+                                 onClick={(e) => { e.stopPropagation(); handleJumpToChat(c.name); }}
+                                 className="p-2 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors tooltip bg-white border border-slate-100"
+                                 title="發送訊息"
+                               >
+                                  <MessageCircle className="w-4 h-4" />
+                               </button>
+                               <button 
+                                 onClick={() => handleViewClientDetail(c)}
+                                 className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors bg-white border border-slate-100" title="查看詳情"
+                               >
+                                  <ArrowUpRight className="w-4 h-4" />
+                               </button>
+                            </div>
+                         </td>
+                      </tr>
+                   ))}
+                </tbody>
+             </table>
+             
+             {/* Pagination Placeholder */}
+             <div className="p-4 border-t border-slate-100 flex justify-center">
+                <button className="text-xs text-slate-400 font-medium hover:text-slate-600">載入更多...</button>
+             </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* --- MODALS --- */}
+      
+      {/* Article Modal */}
+      {showArticleModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex justify-center items-center animate-in fade-in duration-200" onClick={() => setShowArticleModal(null)}>
+            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto m-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-slate-100 flex justify-between items-start sticky top-0 bg-white z-10">
+                    <div>
+                        <span className="text-xs font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded mb-2 inline-block">{showArticleModal.source}</span>
+                        <h2 className="text-xl font-bold text-slate-800">{showArticleModal.title}</h2>
+                        <div className="text-xs text-slate-400 mt-1">{showArticleModal.date}</div>
+                    </div>
+                    <button onClick={() => setShowArticleModal(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="p-8 text-slate-600 leading-relaxed whitespace-pre-wrap">
+                    {showArticleModal.content}
+                </div>
+                <div className="p-6 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0 bg-white">
+                    <a href={showArticleModal.url} target="_blank" rel="noopener noreferrer" className="px-4 py-2 border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 rounded-lg flex items-center gap-2">
+                        <ExternalLink className="w-4 h-4" /> 前往原始網頁
+                    </a>
+                    <button onClick={() => setShowArticleModal(null)} className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-50 rounded-lg">關閉</button>
+                    <button onClick={() => {setShowArticleModal(null); handleGeneratePost(showArticleModal, 'trends');}} className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" /> 生成貼文
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Re-engagement Modal */}
+      {showReengagementModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex justify-center items-center animate-in fade-in duration-200" onClick={() => setShowReengagementModal(null)}>
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-orange-500" /> AI 喚醒訊息生成
+                    </h3>
+                    <button onClick={() => setShowReengagementModal(null)} className="text-slate-400 hover:text-slate-600">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="p-6">
+                    <div className="mb-4">
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">目標客戶</label>
+                        <div className="text-slate-800 font-bold">{showReengagementModal.name}</div>
+                    </div>
+                    <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
+                        <textarea 
+                            className="w-full bg-transparent border-none outline-none text-slate-700 text-sm resize-none h-32"
+                            value={generatedReengagementMsg}
+                            onChange={(e) => setGeneratedReengagementMsg(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+                    <button onClick={() => setShowReengagementModal(null)} className="px-4 py-2 text-slate-500 font-bold hover:bg-slate-50 rounded-lg">取消</button>
+                    <button onClick={() => {
+                        setShowReengagementModal(null); 
+                        handleJumpToChat(showReengagementModal.name);
+                        setTimeout(() => setManualInput(generatedReengagementMsg), 500);
+                    }} className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 flex items-center gap-2">
+                        <MessageCircle className="w-4 h-4" /> 前往發送
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex justify-center items-center animate-in fade-in duration-200" onClick={() => setShowSettingsModal(false)}>
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white">
+                    <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 rounded-full bg-white/20 border-2 border-white/30 overflow-hidden">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Annie" alt="User" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold">YUJUN</h3>
+                                <p className="text-sm opacity-80">Pro 專業版方案</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowSettingsModal(false)} className="text-white/60 hover:text-white">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+                </div>
+                <div className="p-6 space-y-6">
+                    {/* Subscription Info */}
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider">訂閱資訊</h4>
+                        <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                            <span className="text-slate-600 font-medium">目前方案</span>
+                            <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-bold">Pro 專業版</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                            <span className="text-slate-600 font-medium">下次扣款日</span>
+                            <span className="text-slate-800 font-bold">2025/12/14</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                            <span className="text-slate-600 font-medium">扣款金額</span>
+                            <span className="text-slate-800 font-bold">NT$ 3,000</span>
+                        </div>
+                    </div>
+
+                    {/* History */}
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider">最近扣款紀錄</h4>
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-slate-600">2025/11/14</span>
+                                <span className="text-slate-800 font-bold">- NT$ 3,000</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-slate-600">2025/10/14</span>
+                                <span className="text-slate-800 font-bold">- NT$ 3,000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button className="w-full py-3 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors">
+                        管理訂閱與付款方式
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+      
+      {/* Client Detail & Edit Modal (UPDATED) */}
+      {showClientModal && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 flex justify-end animate-in fade-in duration-200" onClick={() => setShowClientModal(null)}>
+          <div className="w-full md:w-[480px] bg-white h-full shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-right duration-300" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex gap-4 items-center">
+                <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-2xl font-bold text-orange-600">
+                  {showClientModal.name[0]}
+                </div>
+                <div>
+                  {isEditingClient ? (
+                     <input 
+                        className="text-2xl font-bold text-slate-800 border-b border-slate-300 focus:border-orange-500 outline-none bg-transparent w-full"
+                        value={editingClientData.name}
+                        onChange={(e) => setEditingClientData({...editingClientData, name: e.target.value})}
+                     />
+                  ) : (
+                     <h2 className="text-2xl font-bold text-slate-800">{showClientModal.name}</h2>
+                  )}
+                  
+                  {isEditingClient ? (
+                     <input 
+                        className="text-slate-500 font-medium border-b border-slate-300 focus:border-orange-500 outline-none bg-transparent w-full mt-1 text-sm"
+                        value={editingClientData.company}
+                        onChange={(e) => setEditingClientData({...editingClientData, company: e.target.value})}
+                        placeholder="公司名稱"
+                     />
+                  ) : (
+                     <p className="text-slate-500 font-medium">{showClientModal.company}</p>
+                  )}
+                  
+                  {!isEditingClient && (
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${showClientModal.status === '已簽約' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {showClientModal.status}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                        {showClientModal.industry || '未分類'}
+                        </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                 {isEditingClient ? (
+                    <button onClick={handleSaveClientData} className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 shadow-md">
+                        <Save className="w-5 h-5" />
+                    </button>
+                 ) : (
+                    <button onClick={() => setIsEditingClient(true)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-orange-500">
+                        <Edit3 className="w-5 h-5" />
+                    </button>
+                 )}
+                 <button onClick={() => setShowClientModal(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">
+                   <X className="w-6 h-6" />
+                 </button>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-xl text-center">
+                      <div className="text-xs text-slate-500 mb-1">累計消費</div>
+                      <div className="text-lg font-bold text-slate-800">NT$ {showClientModal.totalSpent.toLocaleString()}</div>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl text-center">
+                      <div className="text-xs text-slate-500 mb-1">互動次數</div>
+                      <div className="text-lg font-bold text-slate-800">{showClientModal.visits} 次</div>
+                  </div>
+              </div>
+
+              {/* Contact Info (Editable) */}
+              <div className="bg-white border border-slate-100 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-3 text-slate-600">
+                  <Phone className="w-4 h-4" />
+                  {isEditingClient ? (
+                      <input className="border-b border-slate-200 outline-none focus:border-orange-500 flex-1" value={editingClientData.phone} onChange={(e) => setEditingClientData({...editingClientData, phone: e.target.value})} />
+                  ) : <span>{showClientModal.phone}</span>}
+                </div>
+                <div className="flex items-center gap-3 text-slate-600">
+                  <Mail className="w-4 h-4" />
+                  {isEditingClient ? (
+                      <input className="border-b border-slate-200 outline-none focus:border-orange-500 flex-1" value={editingClientData.email} onChange={(e) => setEditingClientData({...editingClientData, email: e.target.value})} />
+                  ) : <span>{showClientModal.email}</span>}
+                </div>
+                <div className="flex items-center gap-3 text-slate-600">
+                  <Globe className="w-4 h-4" />
+                  <span>來源：{showClientModal.source}</span>
+                </div>
+                
+                {isEditingClient && (
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                         <div>
+                             <label className="text-[10px] uppercase font-bold text-slate-400">狀態</label>
+                             <select className="w-full border-b border-slate-200 outline-none text-sm py-1 bg-transparent" value={editingClientData.status} onChange={(e) => setEditingClientData({...editingClientData, status: e.target.value})}>
+                                 <option>已簽約</option>
+                                 <option>洽談中</option>
+                                 <option>潛在</option>
+                             </select>
+                         </div>
+                         <div>
+                             <label className="text-[10px] uppercase font-bold text-slate-400">產業</label>
+                             <select className="w-full border-b border-slate-200 outline-none text-sm py-1 bg-transparent" value={editingClientData.industry} onChange={(e) => setEditingClientData({...editingClientData, industry: e.target.value})}>
+                                 <option>設計</option>
+                                 <option>美業</option>
+                                 <option>運動/健康</option>
+                                 <option>媒體</option>
+                                 <option>其他</option>
+                             </select>
+                         </div>
+                    </div>
+                )}
+              </div>
+
+              {/* Tags (Simple View for now) */}
+              <div>
+                <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm">
+                  <Users className="w-4 h-4" /> 客戶標籤
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                    {showClientModal.tags.map(tag => (
+                        <span key={tag} className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-sm text-slate-600">
+                            {tag}
+                        </span>
+                    ))}
+                    {isEditingClient && <button className="px-3 py-1 bg-slate-100 border border-dashed border-slate-300 rounded-lg text-sm text-slate-400 hover:text-slate-600">+ 新增</button>}
+                </div>
+              </div>
+
+              {/* Notes (Editable) */}
+              <div>
+                <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm">
+                  <Edit3 className="w-4 h-4" /> 備註筆記
+                </h3>
+                {isEditingClient ? (
+                    <textarea 
+                        className="w-full h-24 p-2 border border-slate-200 rounded-xl outline-none focus:border-orange-500 bg-yellow-50/50 text-sm"
+                        value={editingClientData.notes}
+                        onChange={(e) => setEditingClientData({...editingClientData, notes: e.target.value})}
+                    />
+                ) : (
+                    <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 text-slate-700 text-sm leading-relaxed">
+                        {showClientModal.notes}
+                    </div>
+                )}
+              </div>
+
+              {!isEditingClient && (
+                <div className="pt-4 border-t border-slate-100">
+                    <button 
+                        onClick={() => handleJumpToChat(showClientModal.name)}
+                        className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 flex items-center justify-center gap-2"
+                    >
+                        <MessageCircle className="w-4 h-4" /> 發送訊息
+                    </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Toast */}
+      {notification && (
+        <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-5 fade-in duration-300 z-50 border border-slate-700">
+          <CheckCircle className="w-5 h-5 text-green-400" />
+          <span className="font-medium text-sm">{notification}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Helper Components
+const SidebarItem = ({ icon: Icon, label, active, onClick, alertCount }) => (
+  <button
+    onClick={onClick}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+      active 
+        ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' 
+        : 'text-slate-500 hover:bg-orange-50 hover:text-orange-600'
+    }`}
+  >
+    <Icon className="w-5 h-5" />
+    <span className="font-medium">{label}</span>
+    {alertCount > 0 && (
+      <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full ${active ? 'bg-white text-orange-500' : 'bg-orange-100 text-orange-600'}`}>
+        {alertCount}
+      </span>
+    )}
+  </button>
+);
+
+const IntegrationCard = ({ name, icon: Icon, status, color, desc }) => (
+    <div className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between h-40 hover:shadow-md transition-shadow">
+        <div className="flex justify-between items-start">
+            <div className={`p-3 rounded-xl bg-slate-50 ${color}`}>
+                <Icon className="w-6 h-6" />
+            </div>
+            <div className={`flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full ${status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                <div className={`w-2 h-2 rounded-full ${status === 'connected' ? 'bg-green-500' : 'bg-slate-400'}`}></div>
+                {status === 'connected' ? '已連線' : '未連線'}
+            </div>
+        </div>
+        <div>
+            <h3 className="font-bold text-slate-800">{name}</h3>
+            <p className="text-xs text-slate-500 mt-1">{desc}</p>
+        </div>
+    </div>
+);
+
+const StatCard = ({ title, value, icon: Icon, color }) => (
+  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+     <div className={`p-4 rounded-xl ${color}`}>
+        <Icon className="w-6 h-6" />
+     </div>
+     <div>
+        <h3 className="text-slate-500 text-sm font-medium">{title}</h3>
+        <div className="text-2xl font-bold text-slate-800">{value}</div>
+     </div>
+  </div>
+);
